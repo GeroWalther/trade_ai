@@ -90,3 +90,26 @@ typings/
 
 # Electron-Forge
 out/
+
+# Dependencies
+/node_modules
+
+# Production
+/dist
+/build
+
+# Environment
+.env
+.env.local
+.env.development
+.env.production
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
