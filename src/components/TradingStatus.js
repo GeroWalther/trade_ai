@@ -41,78 +41,47 @@ const TradingStatus = () => {
 
   return (
     <div className='min-h-screen bg-[#1a1f3c] text-white w-full m-0 p-0'>
-      <div className='w-full'>
+      <div className='w-full p-6'>
         <MarketOverview
           marketPrices={tradingStatus.market_prices}
           account={tradingStatus.account}
           positions={tradingStatus.positions}
         />
 
-        {/* Active Positions */}
-        <div className='mt-4 bg-[#232a4d]'>
-          <h3 className='text-xl font-bold mb-6 text-blue-100'>Positions</h3>
-          <div className='grid gap-4'>
-            {Object.entries(tradingStatus.positions || {}).map(
-              ([symbol, position]) => (
-                <div
-                  key={symbol}
-                  className='border-l-4 border-blue-700 pl-4 py-4'>
-                  <div className='flex justify-between items-center mb-2'>
-                    <h4 className='text-lg font-bold'>{symbol}</h4>
-                    <span
-                      className={`px-3 py-1 rounded text-sm font-medium ${
-                        position.profit_pct >= 0
-                          ? 'bg-emerald-900 text-emerald-200'
-                          : 'bg-rose-900 text-rose-200'
-                      }`}>
-                      {position.profit_pct?.toFixed(2) || '0.00'}%
-                    </span>
-                  </div>
-                  <div className='grid grid-cols-3 gap-4 text-blue-200'>
-                    <div>
-                      <p className='text-sm opacity-75'>Quantity</p>
-                      <p className='text-lg font-semibold'>
-                        {position.quantity}
-                      </p>
-                    </div>
-                    <div>
-                      <p className='text-sm opacity-75'>Entry</p>
-                      <p className='text-lg font-semibold'>
-                        ${position.entry_price?.toFixed(4) || 'N/A'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className='text-sm opacity-75'>Current</p>
-                      <p className='text-lg font-semibold'>
-                        ${position.current_price?.toFixed(4) || 'N/A'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )
-            )}
-          </div>
-        </div>
-
         {/* Stats and Market Status */}
-        <div className='grid grid-cols-2 gap-4 mt-4'>
-          <div className='bg-[#232a4d]'>
-            <h3 className='text-xl font-bold mb-6 text-blue-100'>Statistics</h3>
+        <div className='grid grid-cols-2 gap-6 mt-8'>
+          {/* Statistics Panel */}
+          <div className='bg-[#232a4d] rounded-lg p-6 shadow-lg'>
+            <h3 className='text-xl font-bold mb-6 text-blue-100 flex items-center'>
+              <svg
+                className='w-5 h-5 mr-2 text-blue-400'
+                fill='none'
+                stroke='currentColor'
+                viewBox='0 0 24 24'>
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
+                />
+              </svg>
+              Statistics
+            </h3>
             <div className='grid grid-cols-3 gap-6'>
-              <div className='text-center'>
-                <p className='text-blue-300 text-sm'>Win Rate</p>
+              <div className='bg-[#1a1f3c] p-4 rounded-lg'>
+                <p className='text-blue-300 text-sm mb-2'>Win Rate</p>
                 <p className='text-2xl font-bold'>
                   {tradingStatus.trading_stats?.win_rate || 0}%
                 </p>
               </div>
-              <div className='text-center'>
-                <p className='text-blue-300 text-sm'>Wins</p>
+              <div className='bg-[#1a1f3c] p-4 rounded-lg'>
+                <p className='text-blue-300 text-sm mb-2'>Wins</p>
                 <p className='text-2xl font-bold text-emerald-400'>
                   {tradingStatus.trading_stats?.winning_trades || 0}
                 </p>
               </div>
-              <div className='text-center'>
-                <p className='text-blue-300 text-sm'>Losses</p>
+              <div className='bg-[#1a1f3c] p-4 rounded-lg'>
+                <p className='text-blue-300 text-sm mb-2'>Losses</p>
                 <p className='text-2xl font-bold text-rose-400'>
                   {tradingStatus.trading_stats?.losing_trades || 0}
                 </p>
@@ -120,11 +89,26 @@ const TradingStatus = () => {
             </div>
           </div>
 
-          <div className='bg-[#232a4d]'>
-            <h3 className='text-xl font-bold mb-6 text-blue-100'>Market</h3>
+          {/* Market Status Panel */}
+          <div className='bg-[#232a4d] rounded-lg p-6 shadow-lg'>
+            <h3 className='text-xl font-bold mb-6 text-blue-100 flex items-center'>
+              <svg
+                className='w-5 h-5 mr-2 text-blue-400'
+                fill='none'
+                stroke='currentColor'
+                viewBox='0 0 24 24'>
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9'
+                />
+              </svg>
+              Market
+            </h3>
             <div className='grid grid-cols-2 gap-6'>
-              <div>
-                <p className='text-blue-300 text-sm'>Status</p>
+              <div className='bg-[#1a1f3c] p-4 rounded-lg'>
+                <p className='text-blue-300 text-sm mb-2'>Status</p>
                 <p
                   className={`text-lg font-bold ${
                     tradingStatus.market_status.is_market_open
@@ -136,13 +120,13 @@ const TradingStatus = () => {
                     : 'Market Closed'}
                 </p>
               </div>
-              <div>
-                <p className='text-blue-300 text-sm'>Active Pairs</p>
-                <div className='flex gap-2 flex-wrap'>
+              <div className='bg-[#1a1f3c] p-4 rounded-lg'>
+                <p className='text-blue-300 text-sm mb-2'>Active Pairs</p>
+                <div className='flex flex-wrap gap-2'>
                   {tradingStatus.market_status.active_symbols.map((symbol) => (
                     <span
                       key={symbol}
-                      className='px-2 py-1 bg-blue-800 text-blue-200 text-xs rounded'>
+                      className='px-2 py-1 bg-blue-800 text-blue-200 text-xs rounded-full'>
                       {symbol}
                     </span>
                   ))}

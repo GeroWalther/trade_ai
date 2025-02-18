@@ -1,8 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { config } from '../config';
 
 const MarketOverview = ({ marketPrices, account, positions }) => {
+  const [availableInstruments, setAvailableInstruments] = useState([
+    'EUR_USD',
+    'GBP_USD',
+    'USD_JPY',
+    'AUD_USD',
+    'USD_CAD',
+    'BTC_USD',
+  ]);
+  const [activeInstruments, setActiveInstruments] = useState([
+    'EUR_USD',
+    'BTC_USD',
+  ]);
+
+  const addInstrument = (instrument) => {
+    setActiveInstruments([...activeInstruments, instrument]);
+  };
+
+  const removeInstrument = (instrument) => {
+    setActiveInstruments(activeInstruments.filter((i) => i !== instrument));
+  };
+
   if (!marketPrices || !account) return <div>Loading market data...</div>;
 
   const formatPrice = (price) => {
@@ -47,9 +68,19 @@ const MarketOverview = ({ marketPrices, account, positions }) => {
     }
   };
 
-  const handleClosePosition = async () => {
+  const handleClosePosition = async (symbol) => {
     try {
-      await axios.post('http://localhost:5002/close-position/EUR_USD');
+      console.log(`Closing position for ${symbol}`);
+      const response = await axios.post(
+        `${config.api.tradingUrl}/close-position/${symbol}`
+      );
+      console.log('Close position response:', response.data);
+
+      if (response.data.status === 'success') {
+        console.log(`Position closed successfully: ${response.data.order_id}`);
+      } else {
+        console.error('Failed to close position:', response.data.message);
+      }
     } catch (error) {
       console.error('Error closing position:', error);
     }
@@ -83,16 +114,17 @@ const MarketOverview = ({ marketPrices, account, positions }) => {
   };
 
   return (
-    <div className='bg-[#232a4d] text-white w-full'>
-      <div className='grid grid-cols-3 gap-8 mb-8 pb-8'>
+    <div className='bg-[#232a4d] text-white w-full p-6'>
+      {/* Account Info */}
+      <div className='grid grid-cols-3 gap-8 mb-8'>
         <div>
-          <p className='text-blue-300 text-sm mb-1'>Balance</p>
+          <p className='text-blue-300 text-sm mb-1'>Initial Balance</p>
           <p className='text-3xl font-bold'>
             {formatCurrency(account.balance)}
           </p>
         </div>
         <div>
-          <p className='text-blue-300 text-sm mb-1'>P/L</p>
+          <p className='text-blue-300 text-sm mb-1'>Unrealized P/L</p>
           <p
             className={`text-3xl font-bold ${
               account.unrealized_pl >= 0 ? 'text-emerald-400' : 'text-rose-400'
@@ -101,79 +133,146 @@ const MarketOverview = ({ marketPrices, account, positions }) => {
           </p>
         </div>
         <div>
-          <p className='text-blue-300 text-sm mb-1'>Total</p>
+          <p className='text-blue-300 text-sm mb-1'>Current Value</p>
           <p className='text-3xl font-bold'>
             {formatCurrency(account.total_value)}
           </p>
         </div>
       </div>
 
-      <div className='grid grid-cols-2 gap-8'>
-        <div className='pl-4'>
-          <div className='flex justify-between items-center mb-2'>
-            <span className='text-blue-300 text-sm'>EUR/USD</span>
-            <span className='px-2 py-1 bg-blue-800 text-blue-200 text-xs rounded'>
-              FOREX
-            </span>
-          </div>
-          <PriceDisplay
-            symbol='EUR/USD'
-            price={marketPrices.EUR_USD?.price}
-            action={marketPrices.EUR_USD?.action}
-          />
-          <div className='flex gap-2'>
-            <button
-              onClick={() => handleTrade('EUR_USD', 'buy')}
-              className='px-4 py-2 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition-colors text-sm font-medium flex items-center'>
-              <svg
-                className='w-4 h-4 mr-2'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'>
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M12 6v6m0 0v6m0-6h6m-6 0H6'
-                />
-              </svg>
-              Buy
-            </button>
-            <button
-              onClick={() => handleTrade('EUR_USD', 'sell')}
-              className='px-4 py-2 bg-rose-500 text-white rounded hover:bg-rose-600 transition-colors text-sm font-medium flex items-center'>
-              <svg
-                className='w-4 h-4 mr-2'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'>
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M20 12H4'
-                />
-              </svg>
-              Sell
-            </button>
-          </div>
-        </div>
-
-        <div className='pl-4'>
-          <div className='flex justify-between items-center mb-2'>
-            <span className='text-blue-300 text-sm'>BTC/USD</span>
-            <span className='px-2 py-1 bg-orange-900 text-orange-200 text-xs rounded'>
-              CRYPTO
-            </span>
-          </div>
-          <PriceDisplay
-            symbol='BTC/USD'
-            price={marketPrices.BTC_USD?.price}
-            action={marketPrices.BTC_USD?.action}
-          />
-        </div>
+      {/* Instrument Management */}
+      <div className='mb-6'>
+        <select
+          className='bg-blue-900 text-blue-200 px-3 py-2 rounded'
+          onChange={(e) => addInstrument(e.target.value)}
+          value=''>
+          <option value='' disabled>
+            Add Instrument
+          </option>
+          {availableInstruments
+            .filter((i) => !activeInstruments.includes(i))
+            .map((instrument) => (
+              <option key={instrument} value={instrument}>
+                {instrument.replace('_', '/')}
+              </option>
+            ))}
+        </select>
       </div>
 
+      {/* Trading Instruments */}
+      <div className='grid grid-cols-2 gap-8 mb-8'>
+        {activeInstruments.map((symbol) => (
+          <div key={symbol} className='bg-[#1a1f3c] p-4 rounded relative'>
+            <button
+              onClick={() => removeInstrument(symbol)}
+              className='absolute top-2 right-2 text-rose-400 hover:text-rose-300 p-1'>
+              <svg
+                className='w-4 h-4'
+                fill='none'
+                stroke='currentColor'
+                viewBox='0 0 24 24'>
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M6 18L18 6M6 6l12 12'
+                />
+              </svg>
+            </button>
+            <div className='flex justify-between items-center mb-2'>
+              <span className='text-blue-300 text-sm'>
+                {symbol.replace('_', '/')}
+              </span>
+              <span className='px-2 py-1 bg-blue-800 text-blue-200 text-xs rounded'>
+                {symbol.includes('BTC') ? 'CRYPTO' : 'FOREX'}
+              </span>
+            </div>
+            <PriceDisplay
+              symbol={symbol}
+              price={marketPrices[symbol]?.price}
+              action={marketPrices[symbol]?.action}
+            />
+            <div className='flex gap-2 mt-4'>
+              <button
+                onClick={() => handleTrade(symbol, 'buy')}
+                className='flex-1 px-4 py-2 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition-colors text-sm font-medium'>
+                Buy
+              </button>
+              <button
+                onClick={() => handleTrade(symbol, 'sell')}
+                className='flex-1 px-4 py-2 bg-rose-500 text-white rounded hover:bg-rose-600 transition-colors text-sm font-medium'>
+                Sell
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Positions */}
+      {positions && Object.keys(positions).length > 0 && (
+        <div className='mt-8'>
+          <h3 className='text-xl font-bold mb-4'>Positions</h3>
+          <div className='space-y-4'>
+            {Object.entries(positions).map(([symbol, position]) => (
+              <div key={symbol} className='bg-[#1a1f3c] p-4 rounded'>
+                {/* Position Header */}
+                <div className='flex justify-between items-center mb-2'>
+                  <span className='text-blue-300 text-sm'>{symbol}</span>
+                  <div className='flex items-center gap-2'>
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        position.profit_pct >= 0
+                          ? 'bg-emerald-900 text-emerald-200'
+                          : 'bg-rose-900 text-rose-200'
+                      }`}>
+                      {position.profit_pct?.toFixed(2)}%
+                    </span>
+                    <span
+                      className={`text-xs ${
+                        position.pl_euro >= 0
+                          ? 'text-emerald-400'
+                          : 'text-rose-400'
+                      }`}>
+                      €{position.pl_euro?.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Position Details */}
+                <div className='grid grid-cols-3 gap-4 mb-4'>
+                  <div>
+                    <p className='text-xs text-blue-300 mb-1'>Quantity</p>
+                    <p className='text-lg font-bold'>{position.quantity}</p>
+                  </div>
+                  <div>
+                    <p className='text-xs text-blue-300 mb-1'>Entry</p>
+                    <p className='text-lg font-bold'>
+                      ${position.entry_price?.toFixed(5)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className='text-xs text-blue-300 mb-1'>Current</p>
+                    <p className='text-lg font-bold'>
+                      ${position.current_price?.toFixed(5)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Close Button */}
+                <div className='flex justify-end'>
+                  <button
+                    onClick={() => handleClosePosition(symbol)}
+                    className='px-4 py-2 text-rose-400 hover:text-rose-300 hover:bg-rose-900/20 rounded border border-rose-400 hover:border-rose-300 text-sm transition-colors'>
+                    Close Position
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Last Update Time */}
       <div className='mt-6 text-blue-400 text-sm flex items-center'>
         <svg
           className='w-4 h-4 mr-2'
@@ -191,55 +290,6 @@ const MarketOverview = ({ marketPrices, account, positions }) => {
           ? new Date(marketPrices.last_update).toLocaleString()
           : 'N/A'}
       </div>
-
-      {positions && Object.keys(positions).length > 0 && (
-        <div className='pl-4 mt-8'>
-          <h3 className='text-xl font-bold mb-4'>Positions</h3>
-          {Object.entries(positions).map(([symbol, position]) => (
-            <div key={symbol} className='mb-4'>
-              <div className='flex justify-between items-center mb-2'>
-                <span className='text-blue-300 text-sm'>{symbol}</span>
-                <div className='flex items-center gap-2'>
-                  <span
-                    className={`px-2 py-1 rounded text-xs ${
-                      position.profit_pct >= 0
-                        ? 'bg-emerald-900 text-emerald-200'
-                        : 'bg-rose-900 text-rose-200'
-                    }`}>
-                    {position.profit_pct?.toFixed(2)}%
-                  </span>
-                  <span
-                    className={`text-xs ${
-                      position.pl_euro >= 0
-                        ? 'text-emerald-400'
-                        : 'text-rose-400'
-                    }`}>
-                    €{position.pl_euro?.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-              <div className='grid grid-cols-3 gap-4'>
-                <div>
-                  <p className='text-xs text-blue-300 mb-1'>Quantity</p>
-                  <p className='text-lg font-bold'>{position.quantity}</p>
-                </div>
-                <div>
-                  <p className='text-xs text-blue-300 mb-1'>Entry</p>
-                  <p className='text-lg font-bold'>
-                    ${position.entry_price?.toFixed(5)}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-xs text-blue-300 mb-1'>Current</p>
-                  <p className='text-lg font-bold'>
-                    ${position.current_price?.toFixed(5)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 };
