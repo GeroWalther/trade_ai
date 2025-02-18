@@ -46,6 +46,7 @@ const TradingStatus = () => {
           marketPrices={tradingStatus.market_prices}
           account={tradingStatus.account}
           positions={tradingStatus.positions}
+          onTradeComplete={fetchData}
         />
 
         {/* Stats and Market Status */}

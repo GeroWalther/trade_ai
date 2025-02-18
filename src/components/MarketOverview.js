@@ -2,7 +2,12 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { config } from '../config';
 
-const MarketOverview = ({ marketPrices, account, positions }) => {
+const MarketOverview = ({
+  marketPrices,
+  account,
+  positions,
+  onTradeComplete,
+}) => {
   const [availableInstruments, setAvailableInstruments] = useState([
     'EUR_USD',
     'GBP_USD',
@@ -10,11 +15,16 @@ const MarketOverview = ({ marketPrices, account, positions }) => {
     'AUD_USD',
     'USD_CAD',
     'BTC_USD',
+    'SPX500_USD', // S&P 500
+    'NAS100_USD', // Nasdaq
+    'XAU_USD', // Gold
+    'BCO_USD', // Brent Crude Oil
   ]);
   const [activeInstruments, setActiveInstruments] = useState([
     'EUR_USD',
     'BTC_USD',
   ]);
+  const [showPositionsModal, setShowPositionsModal] = useState(false);
 
   const addInstrument = (instrument) => {
     setActiveInstruments([...activeInstruments, instrument]);
@@ -36,12 +46,20 @@ const MarketOverview = ({ marketPrices, account, positions }) => {
     return `$${amount.toFixed(2)}`;
   };
 
+  const getDefaultQuantity = (symbol) => {
+    if (symbol.includes('XAU')) return 1; // Gold trades in smaller units
+    if (symbol.includes('BTC')) return 0.1; // Bitcoin trades in smaller units
+    if (symbol.includes('SPX') || symbol.includes('NAS')) return 1; // Index trades
+    if (symbol.includes('BCO')) return 10; // Oil trades in barrels
+    return 1000; // Default for forex
+  };
+
   const handleTrade = async (symbol, side) => {
     try {
       const requestData = {
         symbol: symbol,
         side: side,
-        quantity: 1000,
+        quantity: getDefaultQuantity(symbol),
       };
       console.log('Sending trade request:', requestData);
 
@@ -53,10 +71,11 @@ const MarketOverview = ({ marketPrices, account, positions }) => {
 
       if (response.data.status === 'success') {
         console.log(`Trade executed successfully: ${response.data.order_id}`);
-        // You could add a success notification here
+        if (onTradeComplete) {
+          onTradeComplete();
+        }
       } else {
         console.error('Trade failed:', response.data.message);
-        // You could add an error notification here
       }
     } catch (error) {
       console.error('Trade error details:', {
@@ -64,7 +83,6 @@ const MarketOverview = ({ marketPrices, account, positions }) => {
         response: error.response?.data,
         status: error.response?.status,
       });
-      // You could add an error notification here
     }
   };
 
@@ -83,6 +101,31 @@ const MarketOverview = ({ marketPrices, account, positions }) => {
       }
     } catch (error) {
       console.error('Error closing position:', error);
+    }
+  };
+
+  const fetchAllPositions = async () => {
+    try {
+      const response = await axios.get(`${config.api.baseUrl}/api/positions`);
+      console.log('All open positions:', response.data);
+      if (response.data.status === 'success') {
+        const positions = response.data.positions;
+        console.log('Open positions:');
+        Object.entries(positions).forEach(([symbol, position]) => {
+          console.log(`
+            Symbol: ${symbol}
+            Side: ${position.side}
+            Quantity: ${position.quantity}
+            Entry: ${position.entry_price}
+            Current: ${position.current_price}
+            P/L: €${position.pl_euro.toFixed(2)} (${position.profit_pct.toFixed(
+            2
+          )}%)
+          `);
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching positions:', error);
     }
   };
 
@@ -111,6 +154,25 @@ const MarketOverview = ({ marketPrices, account, positions }) => {
         </div>
       </div>
     );
+  };
+
+  const getInstrumentType = (symbol) => {
+    if (symbol.includes('BTC')) return 'CRYPTO';
+    if (symbol.includes('SPX') || symbol.includes('NAS')) return 'INDEX';
+    if (symbol.includes('XAU') || symbol.includes('BCO')) return 'COMMODITY';
+    return 'FOREX';
+  };
+
+  const formatPositionDetails = (position) => {
+    const isLong = position.quantity > 0;
+    return {
+      ...position,
+      side: isLong ? 'LONG' : 'SHORT',
+      quantity: Math.abs(position.quantity),
+      pl_formatted: `€${position.pl_euro?.toFixed(
+        2
+      )} (${position.profit_pct?.toFixed(2)}%)`,
+    };
   };
 
   return (
@@ -184,7 +246,7 @@ const MarketOverview = ({ marketPrices, account, positions }) => {
                 {symbol.replace('_', '/')}
               </span>
               <span className='px-2 py-1 bg-blue-800 text-blue-200 text-xs rounded'>
-                {symbol.includes('BTC') ? 'CRYPTO' : 'FOREX'}
+                {getInstrumentType(symbol)}
               </span>
             </div>
             <PriceDisplay
@@ -215,9 +277,16 @@ const MarketOverview = ({ marketPrices, account, positions }) => {
           <div className='space-y-4'>
             {Object.entries(positions).map(([symbol, position]) => (
               <div key={symbol} className='bg-[#1a1f3c] p-4 rounded'>
-                {/* Position Header */}
                 <div className='flex justify-between items-center mb-2'>
-                  <span className='text-blue-300 text-sm'>{symbol}</span>
+                  <div className='flex items-center gap-2'>
+                    <span className='text-blue-300 text-sm'>{symbol}</span>
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        position.quantity > 0 ? 'bg-emerald-900' : 'bg-rose-900'
+                      }`}>
+                      {position.quantity > 0 ? 'LONG' : 'SHORT'}
+                    </span>
+                  </div>
                   <div className='flex items-center gap-2'>
                     <span
                       className={`px-2 py-1 rounded text-xs ${
@@ -237,8 +306,6 @@ const MarketOverview = ({ marketPrices, account, positions }) => {
                     </span>
                   </div>
                 </div>
-
-                {/* Position Details */}
                 <div className='grid grid-cols-3 gap-4 mb-4'>
                   <div>
                     <p className='text-xs text-blue-300 mb-1'>Quantity</p>
@@ -257,8 +324,6 @@ const MarketOverview = ({ marketPrices, account, positions }) => {
                     </p>
                   </div>
                 </div>
-
-                {/* Close Button */}
                 <div className='flex justify-end'>
                   <button
                     onClick={() => handleClosePosition(symbol)}
@@ -290,6 +355,12 @@ const MarketOverview = ({ marketPrices, account, positions }) => {
           ? new Date(marketPrices.last_update).toLocaleString()
           : 'N/A'}
       </div>
+
+      <button
+        onClick={fetchAllPositions}
+        className='px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600'>
+        Show All Positions
+      </button>
     </div>
   );
 };
