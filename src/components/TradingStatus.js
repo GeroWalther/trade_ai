@@ -45,6 +45,7 @@ const TradingStatus = () => {
         <MarketOverview
           marketPrices={tradingStatus.market_prices}
           account={tradingStatus.account}
+          positions={tradingStatus.positions}
         />
 
         {/* Active Positions */}

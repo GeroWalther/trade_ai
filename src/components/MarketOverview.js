@@ -1,7 +1,8 @@
 import React from 'react';
 import axios from 'axios';
+import { config } from '../config';
 
-const MarketOverview = ({ marketPrices, account }) => {
+const MarketOverview = ({ marketPrices, account, positions }) => {
   if (!marketPrices || !account) return <div>Loading market data...</div>;
 
   const formatPrice = (price) => {
@@ -14,11 +15,35 @@ const MarketOverview = ({ marketPrices, account }) => {
     return `$${amount.toFixed(2)}`;
   };
 
-  const handleTestTrade = async () => {
+  const handleTrade = async (symbol, side) => {
     try {
-      await axios.post('http://localhost:5002/execute-trade');
+      const requestData = {
+        symbol: symbol,
+        side: side,
+        quantity: 1000,
+      };
+      console.log('Sending trade request:', requestData);
+
+      const response = await axios.post(
+        `${config.api.tradingUrl}/execute-trade`,
+        requestData
+      );
+      console.log('Trade response:', response.data);
+
+      if (response.data.status === 'success') {
+        console.log(`Trade executed successfully: ${response.data.order_id}`);
+        // You could add a success notification here
+      } else {
+        console.error('Trade failed:', response.data.message);
+        // You could add an error notification here
+      }
     } catch (error) {
-      console.error('Error making test trade:', error);
+      console.error('Trade error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      // You could add an error notification here
     }
   };
 
@@ -98,7 +123,7 @@ const MarketOverview = ({ marketPrices, account }) => {
           />
           <div className='flex gap-2'>
             <button
-              onClick={handleTestTrade}
+              onClick={() => handleTrade('EUR_USD', 'buy')}
               className='px-4 py-2 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition-colors text-sm font-medium flex items-center'>
               <svg
                 className='w-4 h-4 mr-2'
@@ -115,7 +140,7 @@ const MarketOverview = ({ marketPrices, account }) => {
               Buy
             </button>
             <button
-              onClick={handleClosePosition}
+              onClick={() => handleTrade('EUR_USD', 'sell')}
               className='px-4 py-2 bg-rose-500 text-white rounded hover:bg-rose-600 transition-colors text-sm font-medium flex items-center'>
               <svg
                 className='w-4 h-4 mr-2'
@@ -126,10 +151,10 @@ const MarketOverview = ({ marketPrices, account }) => {
                   strokeLinecap='round'
                   strokeLinejoin='round'
                   strokeWidth={2}
-                  d='M6 18L18 6M6 6l12 12'
+                  d='M20 12H4'
                 />
               </svg>
-              Close
+              Sell
             </button>
           </div>
         </div>
@@ -166,6 +191,55 @@ const MarketOverview = ({ marketPrices, account }) => {
           ? new Date(marketPrices.last_update).toLocaleString()
           : 'N/A'}
       </div>
+
+      {positions && Object.keys(positions).length > 0 && (
+        <div className='pl-4 mt-8'>
+          <h3 className='text-xl font-bold mb-4'>Positions</h3>
+          {Object.entries(positions).map(([symbol, position]) => (
+            <div key={symbol} className='mb-4'>
+              <div className='flex justify-between items-center mb-2'>
+                <span className='text-blue-300 text-sm'>{symbol}</span>
+                <div className='flex items-center gap-2'>
+                  <span
+                    className={`px-2 py-1 rounded text-xs ${
+                      position.profit_pct >= 0
+                        ? 'bg-emerald-900 text-emerald-200'
+                        : 'bg-rose-900 text-rose-200'
+                    }`}>
+                    {position.profit_pct?.toFixed(2)}%
+                  </span>
+                  <span
+                    className={`text-xs ${
+                      position.pl_euro >= 0
+                        ? 'text-emerald-400'
+                        : 'text-rose-400'
+                    }`}>
+                    €{position.pl_euro?.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+              <div className='grid grid-cols-3 gap-4'>
+                <div>
+                  <p className='text-xs text-blue-300 mb-1'>Quantity</p>
+                  <p className='text-lg font-bold'>{position.quantity}</p>
+                </div>
+                <div>
+                  <p className='text-xs text-blue-300 mb-1'>Entry</p>
+                  <p className='text-lg font-bold'>
+                    ${position.entry_price?.toFixed(5)}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-xs text-blue-300 mb-1'>Current</p>
+                  <p className='text-lg font-bold'>
+                    ${position.current_price?.toFixed(5)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
