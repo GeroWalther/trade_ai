@@ -7,34 +7,23 @@
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
-    "make": "electron-forge make",
-    "publish": "electron-forge publish",
-    "lint": "echo \"No linting configured\""
+    "make": "electron-forge make"
   },
   "devDependencies": {
-    "@babel/core": "^7.26.9",
-    "@babel/preset-react": "^7.26.3",
-    "@electron-forge/cli": "^7.6.1",
-    "@electron-forge/maker-deb": "^7.6.1",
-    "@electron-forge/maker-rpm": "^7.6.1",
-    "@electron-forge/maker-squirrel": "^7.6.1",
-    "@electron-forge/maker-zip": "^7.6.1",
-    "@electron-forge/plugin-auto-unpack-natives": "^7.6.1",
-    "@electron-forge/plugin-fuses": "^7.6.1",
-    "@electron-forge/plugin-webpack": "^7.6.1",
-    "@electron/fuses": "^1.8.0",
-    "@vercel/webpack-asset-relocator-loader": "1.7.3",
-    "autoprefixer": "^10.4.20",
-    "babel-loader": "^9.2.1",
+    "@electron-forge/cli": "^6.4.2",
+    "@electron-forge/maker-deb": "^6.4.2",
+    "@electron-forge/maker-rpm": "^6.4.2",
+    "@electron-forge/maker-squirrel": "^6.4.2",
+    "@electron-forge/maker-zip": "^6.4.2",
+    "@electron-forge/plugin-webpack": "^6.4.2",
+    "electron": "^25.8.4",
     "css-loader": "^6.0.0",
-    "electron": "^29.0.0",
-    "node-loader": "^2.0.0",
-    "postcss": "^8.4.31",
-    "postcss-loader": "^8.1.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
     "style-loader": "^3.0.0",
-    "tailwindcss": "^3.4.1"
+    "@babel/core": "^7.22.17",
+    "@babel/preset-react": "^7.22.15",
+    "babel-loader": "^9.1.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "keywords": [],
   "author": {
@@ -44,15 +33,9 @@
   "license": "MIT",
   "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447",
   "dependencies": {
-    "@types/axios": "^0.14.4",
     "axios": "^1.7.9",
-    "buffer": "^6.0.3",
-    "crypto-browserify": "^3.12.1",
     "electron-squirrel-startup": "^1.0.1",
-    "events": "^3.3.0",
-    "socket.io-client": "^4.7.2",
-    "stream-browserify": "^3.0.0",
-    "util": "^0.12.5"
+    "socket.io-client": "^4.7.2"
   },
   "config": {
     "forge": {

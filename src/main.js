@@ -1,9 +1,8 @@
-import { app, BrowserWindow, session } from 'electron';
+import { app, BrowserWindow, session, shell } from 'electron';
 import path from 'node:path';
-import started from 'electron-squirrel-startup';
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (started) {
+// Handle creating/removing shortcuts on Windows when installing/uninstalling
+if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
@@ -16,8 +15,9 @@ const createWindow = () => {
     width: 1200,
     height: 800,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
       webSecurity: false,
     },
   });
@@ -33,8 +33,15 @@ const createWindow = () => {
     });
   });
 
+  // Handle external links
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    // Open URLs in external browser
+    shell.openExternal(url);
+    return { action: 'deny' }; // Prevent opening in Electron
+  });
+
   // and load the index.html of the app.
-  mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+  mainWindow.loadURL('http://localhost:3000');
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
@@ -43,7 +50,7 @@ const createWindow = () => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', createWindow);
+app.whenReady().then(createWindow);
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits

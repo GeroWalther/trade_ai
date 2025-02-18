@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import tradingService from '../services/trading_service';
 import MarketOverview from './MarketOverview';
 import BotMonitor from './BotMonitor';
+import MarketIntelligence from './MarketIntelligence';
 
 const TradingStatus = () => {
   const [tradingStatus, setTradingStatus] = useState(null);
@@ -64,6 +65,15 @@ const TradingStatus = () => {
                   : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
               }`}>
               Trading Bots
+            </button>
+            <button
+              onClick={() => setActiveTab('intelligence')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'intelligence'
+                  ? 'border-blue-500 text-blue-300'
+                  : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+              }`}>
+              Market Intelligence
             </button>
           </nav>
         </div>
@@ -171,10 +181,13 @@ const TradingStatus = () => {
               </div>
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'bots' ? (
           // Bots Tab Content
           <BotMonitor />
-        )}
+        ) : activeTab === 'intelligence' ? (
+          // Intelligence Tab Content
+          <MarketIntelligence />
+        ) : null}
       </div>
     </div>
   );
