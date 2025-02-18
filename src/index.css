@@ -2,9 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
-/* You can keep your custom styles below */
+/* Reset all defaults */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  border: none !important;
+}
+
 body {
-  margin: auto;
-  max-width: 38rem;
-  padding: 2rem;
+  margin: 0;
+  padding: 0;
+  background-color: #1a1f3c;
+  min-height: 100vh;
+  color: white;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background-color: #1a1f3c;
+}
+
+/* Remove all borders and backgrounds */
+* {
+  border-radius: 0 !important;
+}
+
+.bg-white,
+.bg-blue-900,
+.bg-blue-950 {
+  background-color: #232a4d !important;
 }
