@@ -159,7 +159,8 @@ const MarketOverview = ({
   const getInstrumentType = (symbol) => {
     if (symbol.includes('BTC')) return 'CRYPTO';
     if (symbol.includes('SPX') || symbol.includes('NAS')) return 'INDEX';
-    if (symbol.includes('XAU') || symbol.includes('BCO')) return 'COMMODITY';
+    if (symbol.includes('XAU')) return 'COMMODITY';
+    if (symbol.includes('BCO')) return 'COMMODITY';
     return 'FOREX';
   };
 
@@ -202,39 +203,116 @@ const MarketOverview = ({
         </div>
       </div>
 
-      {/* Trading Pairs */}
-      <div className='grid grid-cols-2 gap-6'>
-        {activeInstruments.map((symbol) => (
-          <div key={symbol} className='bg-[#232a4d] p-6 rounded-lg'>
-            <div className='flex justify-between items-center mb-4'>
-              <h3 className='text-lg font-bold'>{symbol.replace('_', '/')}</h3>
-              <span
-                className={`px-2 py-1 rounded text-sm ${
-                  symbol.includes('BTC')
-                    ? 'bg-blue-900 text-blue-200'
-                    : 'bg-indigo-900 text-indigo-200'
-                }`}>
-                {symbol.includes('BTC') ? 'CRYPTO' : 'FOREX'}
-              </span>
+      {/* Instrument Management */}
+      <div className='bg-[#232a4d] p-6 rounded-lg'>
+        <div className='flex justify-between items-center mb-4'>
+          <h3 className='text-lg font-bold'>Trading Pairs</h3>
+          <button
+            onClick={() => setShowPositionsModal(true)}
+            className='text-blue-300 hover:text-blue-200 text-sm'>
+            Manage Pairs
+          </button>
+        </div>
+
+        {/* Trading Pairs Grid */}
+        <div className='grid grid-cols-2 gap-6'>
+          {activeInstruments.map((symbol) => (
+            <div key={symbol} className='bg-[#1a1f3c] p-6 rounded-lg relative'>
+              {/* Add remove button */}
+              <button
+                onClick={() => removeInstrument(symbol)}
+                className='absolute top-2 right-2 text-rose-400 hover:text-rose-300'>
+                <svg
+                  xmlns='http://www.w3.org/2000/svg'
+                  className='h-5 w-5'
+                  viewBox='0 0 20 20'
+                  fill='currentColor'>
+                  <path
+                    fillRule='evenodd'
+                    d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
+                    clipRule='evenodd'
+                  />
+                </svg>
+              </button>
+
+              {/* Existing trading pair content */}
+              <div className='flex justify-between items-center mb-4'>
+                <h3 className='text-lg font-bold'>
+                  {symbol.replace('_', '/')}
+                </h3>
+                <span
+                  className={`px-2 py-1 rounded text-sm ${(() => {
+                    switch (getInstrumentType(symbol)) {
+                      case 'CRYPTO':
+                        return 'bg-blue-900 text-blue-200';
+                      case 'INDEX':
+                        return 'bg-purple-900 text-purple-200';
+                      case 'COMMODITY':
+                        return 'bg-amber-900 text-amber-200';
+                      default:
+                        return 'bg-indigo-900 text-indigo-200';
+                    }
+                  })()}`}>
+                  {getInstrumentType(symbol)}
+                </span>
+              </div>
+              <p className='text-2xl font-bold mb-4'>
+                {formatPrice(marketPrices?.[symbol]?.price)}
+              </p>
+              <div className='grid grid-cols-2 gap-4'>
+                <button
+                  onClick={() => handleTrade(symbol, 'buy')}
+                  className='bg-emerald-500 hover:bg-emerald-600 text-white py-2 px-4 rounded transition-colors'>
+                  Buy
+                </button>
+                <button
+                  onClick={() => handleTrade(symbol, 'sell')}
+                  className='bg-rose-500 hover:bg-rose-600 text-white py-2 px-4 rounded transition-colors'>
+                  Sell
+                </button>
+              </div>
             </div>
-            <p className='text-2xl font-bold mb-4'>
-              {formatPrice(marketPrices?.[symbol]?.price)}
-            </p>
-            <div className='grid grid-cols-2 gap-4'>
+          ))}
+        </div>
+      </div>
+
+      {/* Manage Pairs Modal */}
+      {showPositionsModal && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+          <div className='bg-[#232a4d] p-6 rounded-lg w-96'>
+            <div className='flex justify-between items-center mb-4'>
+              <h3 className='text-lg font-bold'>Manage Trading Pairs</h3>
               <button
-                onClick={() => handleTrade(symbol, 'buy')}
-                className='bg-emerald-500 hover:bg-emerald-600 text-white py-2 px-4 rounded transition-colors'>
-                Buy
+                onClick={() => setShowPositionsModal(false)}
+                className='text-blue-300 hover:text-blue-200'>
+                ✕
               </button>
-              <button
-                onClick={() => handleTrade(symbol, 'sell')}
-                className='bg-rose-500 hover:bg-rose-600 text-white py-2 px-4 rounded transition-colors'>
-                Sell
-              </button>
+            </div>
+            <div className='space-y-2 max-h-96 overflow-y-auto'>
+              {availableInstruments.map((instrument) => (
+                <div
+                  key={instrument}
+                  className='flex justify-between items-center p-2 hover:bg-[#1a1f3c] rounded'>
+                  <span>{instrument.replace('_', '/')}</span>
+                  {activeInstruments.includes(instrument) ? (
+                    <button
+                      onClick={() => removeInstrument(instrument)}
+                      className='text-rose-400 hover:text-rose-300 px-2 py-1 rounded'>
+                      Remove
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => addInstrument(instrument)}
+                      className='text-emerald-400 hover:text-emerald-300 px-2 py-1 rounded'>
+                      Add
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
       {/* Positions */}
       {Object.keys(positions).length > 0 && (
