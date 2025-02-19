@@ -90,7 +90,12 @@ const generateMockData = (asset) => {
       technicalIndicators: {
         trend: {
           macd: { value: 'BULLISH', strength: 85 },
-          movingAverages: { value: 'BULLISH', strength: 80 },
+          movingAverages: {
+            value: 'BULLISH',
+            strength: 80,
+            ema50: 2018.5,
+            interpretation: 'Price above EMA50 indicates bullish trend',
+          },
           trendStrength: { value: 'STRONG', adx: 28 },
         },
         momentum: {
@@ -180,17 +185,35 @@ const generateMockData = (asset) => {
       technicalIndicators: {
         trend: {
           macd: { value: 'NEUTRAL', strength: 50 },
-          movingAverages: { value: 'NEUTRAL', strength: 50 },
-          trendStrength: { value: 'MODERATE', adx: 15 },
+          movingAverages: {
+            value: 'NEUTRAL',
+            strength: 50,
+            ema50: asset.symbol === 'XAUUSD' ? 2018.5 : 1.085,
+            interpretation: 'Price near EMA50, watching for direction',
+          },
         },
         momentum: {
           rsi: { value: 50, interpretation: 'NEUTRAL' },
-          stochastic: { value: 50, interpretation: 'NEUTRAL' },
-          cci: { value: 0, interpretation: 'NEUTRAL' },
         },
         volatility: {
-          bollinger: { value: 'NORMAL', interpretation: 'AVERAGE VOLATILITY' },
-          atr: { value: 15.5, interpretation: 'NORMAL VOLATILITY' },
+          atr: {
+            value: asset.symbol === 'XAUUSD' ? 15.5 : 0.0055, // More realistic ATR values
+            interpretation: 'Normal Range',
+            ma: asset.symbol === 'XAUUSD' ? 14.8 : 0.0048, // ATR moving average
+          },
+        },
+        keyLevels: {
+          resistance: [
+            asset.symbol === 'XAUUSD'
+              ? ['2025.00', '2050.00', '2080.00']
+              : ['1.0920', '1.0950', '1.1000'],
+          ],
+          support: [
+            asset.symbol === 'XAUUSD'
+              ? ['1975.00', '1950.00', '1920.00']
+              : ['1.0800', '1.0750', '1.0700'],
+          ],
+          pivotPoint: asset.symbol === 'XAUUSD' ? '2000.00' : '1.0850',
         },
       },
       recommendation: 'HOLD',
@@ -620,90 +643,144 @@ const MarketIntelligence = () => {
             <h3 className='text-lg font-semibold text-blue-100 mb-4'>
               Technical Analysis
             </h3>
-            <div className='space-y-4'>
-              {/* Trend Analysis */}
-              <div className='bg-gray-700 rounded-lg p-3'>
-                <h4 className='text-sm font-medium text-gray-300 mb-2'>
-                  Trend Analysis
-                </h4>
-                <div className='grid grid-cols-2 gap-3'>
-                  <div className='bg-gray-800 rounded p-2'>
-                    <span className='text-xs text-gray-400'>MACD</span>
-                    <div
-                      className={`text-sm font-medium ${
+            <div className='space-y-3'>
+              {/* Moving Averages & MACD */}
+              <div className='grid grid-cols-2 gap-3'>
+                <div className='bg-gray-700 rounded-lg p-2'>
+                  <div className='flex justify-between items-center'>
+                    <span className='text-xs text-gray-400'>Daily EMA 50</span>
+                    <span
+                      className={`text-xs ${
                         mockData.analysis.aiAnalysis.technicalIndicators.trend
-                          .macd.value === 'BULLISH'
-                          ? 'text-green-400'
-                          : 'text-red-400'
+                          .movingAverages.ema50 > mockData.analysis.price
+                          ? 'text-red-400'
+                          : 'text-green-400'
                       }`}>
+                      {mockData.analysis.aiAnalysis.technicalIndicators.trend
+                        .movingAverages.ema50 > mockData.analysis.price
+                        ? 'Resistance'
+                        : 'Support'}
+                    </span>
+                  </div>
+                  <div className='text-lg font-medium mt-1'>
+                    {
+                      mockData.analysis.aiAnalysis.technicalIndicators.trend
+                        .movingAverages.ema50
+                    }
+                  </div>
+                </div>
+                <div className='bg-gray-700 rounded-lg p-2'>
+                  <div className='flex justify-between items-center'>
+                    <span className='text-xs text-gray-400'>MACD</span>
+                    <span className='text-xs text-gray-400'>
                       {
                         mockData.analysis.aiAnalysis.technicalIndicators.trend
-                          .macd.value
+                          .macd.strength
                       }
-                    </div>
+                      %
+                    </span>
                   </div>
-                  <div className='bg-gray-800 rounded p-2'>
-                    <span className='text-xs text-gray-400'>ATR (14)</span>
-                    <div className='flex flex-col'>
-                      <span className='text-sm font-medium'>
-                        {
-                          mockData.analysis.aiAnalysis.technicalIndicators
-                            .volatility.atr.value
-                        }
-                      </span>
-                      <span className='text-xs text-gray-400'>
-                        {
-                          mockData.analysis.aiAnalysis.technicalIndicators
-                            .volatility.atr.interpretation
-                        }
-                      </span>
-                    </div>
+                  <div
+                    className={`text-lg font-medium mt-1 ${
+                      mockData.analysis.aiAnalysis.technicalIndicators.trend
+                        .macd.value === 'BULLISH'
+                        ? 'text-green-400'
+                        : mockData.analysis.aiAnalysis.technicalIndicators.trend
+                            .macd.value === 'BEARISH'
+                        ? 'text-red-400'
+                        : 'text-gray-300'
+                    }`}>
+                    {
+                      mockData.analysis.aiAnalysis.technicalIndicators.trend
+                        .macd.value
+                    }
                   </div>
                 </div>
               </div>
 
-              {/* Momentum Indicators */}
-              <div className='bg-gray-700 rounded-lg p-3'>
-                <h4 className='text-sm font-medium text-gray-300 mb-2'>
-                  Momentum
-                </h4>
-                <div className='space-y-2'>
+              {/* RSI & ATR */}
+              <div className='grid grid-cols-2 gap-3'>
+                <div className='bg-gray-700 rounded-lg p-2'>
                   <div className='flex justify-between items-center'>
                     <span className='text-xs text-gray-400'>RSI (14)</span>
-                    <span className='text-sm font-medium'>
+                    <span className='text-xs text-gray-400'>
                       {
                         mockData.analysis.aiAnalysis.technicalIndicators
                           .momentum.rsi.value
                       }
                     </span>
                   </div>
-                  {/* Add more momentum indicators */}
+                  <div
+                    className={`text-lg font-medium mt-1 ${
+                      mockData.analysis.aiAnalysis.technicalIndicators.momentum
+                        .rsi.value > 70
+                        ? 'text-red-400'
+                        : mockData.analysis.aiAnalysis.technicalIndicators
+                            .momentum.rsi.value < 30
+                        ? 'text-green-400'
+                        : 'text-gray-300'
+                    }`}>
+                    {mockData.analysis.aiAnalysis.technicalIndicators.momentum.rsi.interpretation.toUpperCase()}
+                  </div>
+                </div>
+                <div className='bg-gray-700 rounded-lg p-2'>
+                  <div className='flex justify-between items-center'>
+                    <span className='text-xs text-gray-400'>ATR (14)</span>
+                    <span className='text-xs text-gray-400'>
+                      {
+                        mockData.analysis.aiAnalysis.technicalIndicators
+                          .volatility.atr.value
+                      }
+                    </span>
+                  </div>
+                  <div
+                    className={`text-lg font-medium mt-1 ${
+                      mockData.analysis.aiAnalysis.technicalIndicators
+                        .volatility.atr.interpretation === 'Normal Range'
+                        ? 'text-gray-300'
+                        : 'text-orange-400'
+                    }`}>
+                    {mockData.analysis.aiAnalysis.technicalIndicators.volatility.atr.interpretation.toUpperCase()}
+                  </div>
                 </div>
               </div>
 
               {/* Key Levels */}
-              <div className='bg-gray-700 rounded-lg p-3'>
-                <h4 className='text-sm font-medium text-gray-300 mb-2'>
-                  Key Levels
-                </h4>
-                <div className='space-y-2'>
-                  <div className='flex justify-between text-xs'>
-                    <span className='text-red-400'>Resistance</span>
-                    <span>
-                      {
-                        mockData.analysis.aiAnalysis.timeframes.shortTerm
-                          .keyLevels?.resistance?.[0]
-                      }
-                    </span>
+              <div className='bg-gray-700 rounded-lg p-2'>
+                <div className='grid grid-cols-2 gap-4'>
+                  <div>
+                    <span className='text-xs text-gray-400'>Resistance</span>
+                    <div className='space-y-1 mt-1'>
+                      {mockData.analysis.aiAnalysis.technicalIndicators.keyLevels.resistance[0]
+                        .slice(0, 2)
+                        .map((level, idx) => (
+                          <div
+                            key={idx}
+                            className='flex justify-between items-center'>
+                            <span className='text-xs text-red-400'>
+                              R{idx + 1}
+                            </span>
+                            <span className='text-sm font-medium'>{level}</span>
+                          </div>
+                        ))}
+                    </div>
                   </div>
-                  <div className='flex justify-between text-xs'>
-                    <span className='text-green-400'>Support</span>
-                    <span>
-                      {
-                        mockData.analysis.aiAnalysis.timeframes.shortTerm
-                          .keyLevels?.support?.[0]
-                      }
-                    </span>
+                  <div>
+                    <span className='text-xs text-gray-400'>Support</span>
+                    <div className='space-y-1 mt-1'>
+                      {mockData.analysis.aiAnalysis.technicalIndicators.keyLevels.support[0]
+                        .slice(0, 2)
+                        .map((level, idx) => (
+                          <div
+                            key={idx}
+                            className='flex justify-between items-center'>
+                            <span className='text-xs text-green-400'>
+                              S{idx + 1}
+                            </span>
+                            <span className='text-sm font-medium'>{level}</span>
+                          </div>
+                        ))}
+                    </div>
                   </div>
                 </div>
               </div>
