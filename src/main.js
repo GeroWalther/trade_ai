@@ -27,8 +27,22 @@ const createWindow = () => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
+        // Allow CORS from TradingView domains with a single value
         'Access-Control-Allow-Origin': ['*'],
-        'Content-Security-Policy': ['*'],
+        'Access-Control-Allow-Methods': ['GET', 'POST', 'OPTIONS'],
+        'Access-Control-Allow-Headers': ['*'],
+        // Set comprehensive CSP for TradingView
+        'Content-Security-Policy': [
+          "default-src 'self' https://*.tradingview.com https://*.tradingview-widget.com https://s3.tradingview.com https://symbol-search.tradingview.com https://pine-facade.tradingview.com https://telemetry.tradingview.com https://s3-symbol-logo.tradingview.com https://scanner.tradingview.com; " +
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.tradingview.com https://*.tradingview-widget.com https://s3.tradingview.com; " +
+            "connect-src 'self' https://*.tradingview.com https://*.tradingview-widget.com wss://*.tradingview.com https://s3.tradingview.com https://symbol-search.tradingview.com https://pine-facade.tradingview.com https://telemetry.tradingview.com https://scanner.tradingview.com; " +
+            "img-src 'self' data: blob: https://*.tradingview.com https://*.tradingview-widget.com https://s3.tradingview.com https://s3-symbol-logo.tradingview.com; " +
+            "style-src 'self' 'unsafe-inline' https://*.tradingview.com https://*.tradingview-widget.com; " +
+            "font-src 'self' data: https://*.tradingview.com https://*.tradingview-widget.com; " +
+            "frame-src 'self' https://*.tradingview.com https://*.tradingview-widget.com; " +
+            "worker-src 'self' blob: https://*.tradingview.com https://*.tradingview-widget.com; " +
+            "child-src 'self' blob: https://*.tradingview.com https://*.tradingview-widget.com;",
+        ],
       },
     });
   });
