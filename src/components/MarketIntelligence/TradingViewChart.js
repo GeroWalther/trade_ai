@@ -6,7 +6,7 @@ const TradingViewChart = ({ symbol, theme = 'dark' }) => {
   useEffect(() => {
     const widgetConfig = {
       width: '100%',
-      height: '800',
+      height: '100%',
       symbol: symbol,
       interval: '15',
       timezone: 'exchange',
@@ -91,8 +91,8 @@ const TradingViewChart = ({ symbol, theme = 'dark' }) => {
       className='tradingview-chart'
       style={{
         width: '100%',
-        height: 'calc(100vh - 100px)',
-        minHeight: '800px',
+        height: '100%',
+        overflow: 'hidden',
       }}
     />
   );

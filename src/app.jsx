@@ -4,7 +4,7 @@ import TradingStatus from './components/TradingStatus';
 const App = () => {
   return (
     <div className='min-h-screen'>
-      <main className='max-w-7xl mx-auto py-6 sm:px-6 lg:px-8'>
+      <main className='max-w-7xl mx-auto py-0 sm:px-2 lg:px-0'>
         {/* <h1 className='text-2xl font-bold text-white p-4'>Trading Dashboard</h1> */}
         <TradingStatus />
       </main>

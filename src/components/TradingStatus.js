@@ -77,7 +77,7 @@ const TradingStatus = () => {
         </nav>
       </div>
 
-      <div className='w-full p-6'>
+      <div className='w-full p-2'>
         {activeTab === 'overview' ? (
           // Overview Tab Content
           <div>
