@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import tradingService from '../services/trading_service';
 import MarketOverview from './MarketOverview';
+import MarketIntelligence from './MarketIntelligence';
 import BotMonitor from './BotMonitor';
 
 const TradingStatus = () => {
@@ -42,34 +43,40 @@ const TradingStatus = () => {
   }
 
   return (
-    <div className='min-h-screen bg-[#1a1f3c] text-white w-full m-0 p-0'>
+    <div className='bg-[#1a1f3c] rounded-lg shadow-xl'>
       {/* Tab Navigation */}
-      <div className='border-b border-blue-800'>
-        <div className='max-w-7xl mx-auto px-6'>
-          <nav className='-mb-px flex space-x-8'>
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'overview'
-                  ? 'border-blue-500 text-blue-300'
-                  : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
-              }`}>
-              Market Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('bots')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'bots'
-                  ? 'border-blue-500 text-blue-300'
-                  : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
-              }`}>
-              Trading Bots
-            </button>
-          </nav>
-        </div>
+      <div className='border-b border-gray-700'>
+        <nav className='flex space-x-4 px-4' aria-label='Tabs'>
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`px-3 py-2 text-sm font-medium ${
+              activeTab === 'overview'
+                ? 'text-blue-500 border-b-2 border-blue-500'
+                : 'text-gray-400 hover:text-gray-300'
+            }`}>
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('bots')}
+            className={`px-3 py-2 text-sm font-medium ${
+              activeTab === 'bots'
+                ? 'text-blue-500 border-b-2 border-blue-500'
+                : 'text-gray-400 hover:text-gray-300'
+            }`}>
+            Trading Bots
+          </button>
+          <button
+            onClick={() => setActiveTab('market-intelligence')}
+            className={`px-3 py-2 text-sm font-medium ${
+              activeTab === 'market-intelligence'
+                ? 'text-blue-500 border-b-2 border-blue-500'
+                : 'text-gray-400 hover:text-gray-300'
+            }`}>
+            Market Intelligence
+          </button>
+        </nav>
       </div>
 
-      {/* Tab Content */}
       <div className='w-full p-6'>
         {activeTab === 'overview' ? (
           // Overview Tab Content
@@ -171,10 +178,13 @@ const TradingStatus = () => {
               </div>
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'bots' ? (
           // Bots Tab Content
           <BotMonitor />
-        )}
+        ) : activeTab === 'market-intelligence' ? (
+          // Market Intelligence Tab Content
+          <MarketIntelligence />
+        ) : null}
       </div>
     </div>
   );
