@@ -642,7 +642,23 @@ const MarketIntelligence = () => {
                       }
                     </div>
                   </div>
-                  {/* Add more trend indicators */}
+                  <div className='bg-gray-800 rounded p-2'>
+                    <span className='text-xs text-gray-400'>ATR (14)</span>
+                    <div className='flex flex-col'>
+                      <span className='text-sm font-medium'>
+                        {
+                          mockData.analysis.aiAnalysis.technicalIndicators
+                            .volatility.atr.value
+                        }
+                      </span>
+                      <span className='text-xs text-gray-400'>
+                        {
+                          mockData.analysis.aiAnalysis.technicalIndicators
+                            .volatility.atr.interpretation
+                        }
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
