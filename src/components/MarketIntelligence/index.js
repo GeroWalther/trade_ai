@@ -37,195 +37,97 @@ const availableAssets = {
 };
 
 // Mock data generator based on selected asset
-const generateMockData = (asset) => {
+const generateMockData = (asset, term = 'SWING') => {
   // Asset-specific configurations
   const assetConfig = {
     XAUUSD: {
       sentiment: {
-        value: 85,
-        label: 'BULLISH',
-        summary: 'Strong bullish momentum with solid fundamental support',
+        value: 65,
+        label: 'NEUTRAL',
+        summary: 'Mixed signals with bullish bias on higher timeframes',
       },
       confidence: {
-        value: 85,
-        summary: 'High confidence based on multiple confirming signals',
+        value: 60,
+        summary: 'Multiple confirming signals with some divergence',
       },
       riskLevel: {
         value: 45,
         label: 'MEDIUM',
-        summary: 'Moderate risk due to potential Fed policy shifts',
+        summary: 'Moderate risk due to economic uncertainty',
       },
-      timeframes: {
-        longTerm: {
-          outlook: 'BULLISH',
-          target: '2250.00',
-          probability: 75,
-          timeframe: '12-18 months',
-          keyLevels: {
-            resistance: ['2080.00', '2150.00', '2250.00'],
-            support: ['1920.00', '1880.00', '1810.00'],
-          },
-        },
-        midTerm: {
-          outlook: 'BULLISH',
-          target: '2080.00',
-          probability: 70,
-          timeframe: '3-6 months',
-          keyLevels: {
-            resistance: ['2050.00', '2080.00', '2100.00'],
-            support: ['1950.00', '1920.00', '1880.00'],
-          },
-        },
-        shortTerm: {
-          outlook: 'NEUTRAL',
-          target: '2000.00',
-          probability: 60,
-          timeframe: '1-2 weeks',
-          keyLevels: {
-            resistance: ['2000.00', '2025.00', '2050.00'],
-            support: ['1975.00', '1950.00', '1920.00'],
-          },
-        },
-      },
-      technicalIndicators: {
-        trend: {
-          macd: { value: 'BULLISH', strength: 85 },
-          movingAverages: {
-            value: 'BULLISH',
-            strength: 80,
-            ema50: 2018.5,
-            interpretation: 'Price above EMA50 indicates bullish trend',
-          },
-          trendStrength: { value: 'STRONG', adx: 28 },
-        },
-        momentum: {
-          rsi: { value: 65, interpretation: 'BULLISH' },
-          stochastic: { value: 75, interpretation: 'BULLISH' },
-          cci: { value: 125, interpretation: 'BULLISH' },
-        },
-        volatility: {
-          bollinger: {
-            value: 'EXPANDING',
-            interpretation: 'INCREASING VOLATILITY',
-          },
-          atr: { value: 25.5, interpretation: 'HIGH VOLATILITY' },
-        },
-      },
-      recommendation: 'STRONG_BUY',
-      price: 2023.76,
+      price: 2023.45,
       keyFactors: [
-        'Geopolitical tensions increasing safe-haven demand',
-        'Weakening USD outlook',
-        'Central bank gold buying remains strong',
-        'Technical breakout above key resistance',
-        'Inflation concerns persist globally',
-        'Strong institutional accumulation',
+        'USD strength affecting price action',
+        'Global economic uncertainty providing support',
+        'Technical consolidation near key levels',
       ],
-      riskFactors: [
-        'Potential Fed hawkish stance',
-        'Rising real yields',
-        'Technical overbought conditions',
-        'Profit taking at psychological levels',
-      ],
-      aiSummary: `Gold maintains a strong bullish bias with multiple supporting factors across different timeframes. Technical indicators show robust momentum with the MACD and RSI both in bullish territory. The long-term outlook is particularly positive, supported by persistent geopolitical tensions and central bank buying. However, traders should monitor Fed policy developments and manage risk around key psychological levels. The risk/reward ratio remains favorable for long positions with proper risk management.`,
     },
     BTCUSD: {
-      sentiment: 'BEARISH',
-      confidence: 75,
-      riskLevel: 'HIGH',
-      recommendation: 'SELL',
-      price: 52145.3,
+      sentiment: {
+        value: 75,
+        label: 'BULLISH',
+        summary: 'Strong momentum with institutional support',
+      },
+      confidence: {
+        value: 70,
+        summary: 'Clear trend structure with volume confirmation',
+      },
+      riskLevel: {
+        value: 65,
+        label: 'HIGH',
+        summary: 'High volatility environment',
+      },
+      price: 52145.0,
       keyFactors: [
-        'Overbought technical conditions',
-        'Institutional profit taking',
-        'Regulatory concerns emerging',
-        'Declining network activity',
-      ],
-      riskFactors: [
-        'High market volatility',
-        'Regulatory uncertainty',
-        'Leveraged positions unwinding',
+        'ETF inflows supporting price',
+        'Increased institutional adoption',
+        'Technical breakout from key levels',
       ],
     },
+    SPX: {
+      sentiment: {
+        value: 60,
+        label: 'NEUTRAL',
+        summary: 'Balanced market conditions with sector rotation',
+      },
+      confidence: {
+        value: 65,
+        summary: 'Mixed signals across different sectors',
+      },
+      riskLevel: {
+        value: 40,
+        label: 'MEDIUM',
+        summary: 'Normal market volatility',
+      },
+      price: 5000.45,
+      keyFactors: [
+        'Earnings season impact',
+        'Fed policy expectations',
+        'Sector performance divergence',
+      ],
+    },
+    // Default config for other assets
     default: {
       sentiment: {
         value: 50,
         label: 'NEUTRAL',
-        summary: 'Mixed signals with balanced risk-reward ratio',
+        summary: 'Balanced market conditions',
       },
       confidence: {
-        value: 60,
-        summary: 'Moderate confidence based on mixed signals',
+        value: 50,
+        summary: 'Mixed signals in current market environment',
       },
       riskLevel: {
         value: 50,
         label: 'MEDIUM',
-        summary: 'Standard market risk level',
+        summary: 'Standard market risk',
       },
-      timeframes: {
-        longTerm: {
-          outlook: 'NEUTRAL',
-          target: '1.0950',
-          probability: 60,
-          timeframe: '12-18 months',
-        },
-        midTerm: {
-          outlook: 'NEUTRAL',
-          target: '1.0850',
-          probability: 55,
-          timeframe: '3-6 months',
-        },
-        shortTerm: {
-          outlook: 'NEUTRAL',
-          target: '1.0800',
-          probability: 50,
-          timeframe: '1-2 weeks',
-        },
-      },
-      technicalIndicators: {
-        trend: {
-          macd: { value: 'NEUTRAL', strength: 50 },
-          movingAverages: {
-            value: 'NEUTRAL',
-            strength: 50,
-            ema50: asset.symbol === 'XAUUSD' ? 2018.5 : 1.085,
-            interpretation: 'Price near EMA50, watching for direction',
-          },
-        },
-        momentum: {
-          rsi: { value: 50, interpretation: 'NEUTRAL' },
-        },
-        volatility: {
-          atr: {
-            value: asset.symbol === 'XAUUSD' ? 15.5 : 0.0055, // More realistic ATR values
-            interpretation: 'Normal Range',
-            ma: asset.symbol === 'XAUUSD' ? 14.8 : 0.0048, // ATR moving average
-          },
-        },
-        keyLevels: {
-          resistance: [
-            asset.symbol === 'XAUUSD'
-              ? ['2025.00', '2050.00', '2080.00']
-              : ['1.0920', '1.0950', '1.1000'],
-          ],
-          support: [
-            asset.symbol === 'XAUUSD'
-              ? ['1975.00', '1950.00', '1920.00']
-              : ['1.0800', '1.0750', '1.0700'],
-          ],
-          pivotPoint: asset.symbol === 'XAUUSD' ? '2000.00' : '1.0850',
-        },
-      },
-      recommendation: 'HOLD',
       price: 0,
       keyFactors: [
         'Market in consolidation phase',
         'Mixed technical signals',
         'Awaiting clear directional bias',
       ],
-      riskFactors: ['Market uncertainty', 'Economic data volatility'],
-      aiSummary:
-        'Market showing mixed signals with balanced risk-reward ratio. Monitor key levels for directional bias.',
     },
   };
 
@@ -314,6 +216,51 @@ const generateMockData = (asset) => {
   return {
     analysis: {
       symbol: asset.symbol,
+      price: asset.symbol === 'XAUUSD' ? 2023.45 : 1.0876,
+      aiAnalysis: {
+        sentiment: config.sentiment,
+        confidence: config.confidence,
+        probabilityUp:
+          config.sentiment.label === 'BULLISH'
+            ? 75
+            : config.sentiment.label === 'BEARISH'
+            ? 25
+            : 50,
+        riskLevel: config.riskLevel,
+        keyFactors: config.keyFactors,
+        technicalIndicators: {
+          trend: {
+            macd: { value: 'NEUTRAL', strength: 50 },
+            movingAverages: {
+              value: 'NEUTRAL',
+              strength: 50,
+              ema50: asset.symbol === 'XAUUSD' ? 2018.5 : 1.085,
+              interpretation: 'Price near EMA50, watching for direction',
+            },
+          },
+          momentum: {
+            rsi: { value: 50, interpretation: 'NEUTRAL' },
+          },
+          volatility: {
+            atr: {
+              value: asset.symbol === 'XAUUSD' ? 15.5 : 0.0055,
+              interpretation: 'Normal Range',
+              ma: asset.symbol === 'XAUUSD' ? 14.8 : 0.0048,
+            },
+          },
+        },
+        keyLevels: {
+          resistance:
+            asset.symbol === 'XAUUSD'
+              ? ['2025.00', '2050.00', '2080.00']
+              : ['1.0920', '1.0950', '1.1000'],
+          support:
+            asset.symbol === 'XAUUSD'
+              ? ['1975.00', '1950.00', '1920.00']
+              : ['1.0800', '1.0750', '1.0700'],
+          pivotPoint: asset.symbol === 'XAUUSD' ? '2000.00' : '1.0850',
+        },
+      },
       indicators: {
         rsi: config.sentiment.value,
         sma_20: asset.symbol === 'XAUUSD' ? 2023.76 : 1.0876,
@@ -334,25 +281,11 @@ const generateMockData = (asset) => {
           signal: config.sentiment.label,
         },
       },
-      aiAnalysis: {
-        sentiment: config.sentiment,
-        confidence: config.confidence,
-        timeframes: config.timeframes,
-        technicalIndicators: config.technicalIndicators,
-        probabilityUp:
-          config.sentiment.label === 'BULLISH'
-            ? 75
-            : config.sentiment.label === 'BEARISH'
-            ? 25
-            : 50,
-        riskLevel: config.riskLevel,
-        summary: config.aiSummary,
-      },
     },
     macro: {
       indicators: getEconomicIndicators(asset.symbol),
       aiAnalysis: {
-        summary: config.aiSummary,
+        summary: config.sentiment.summary,
         recommendedStrategy: {
           direction: config.sentiment.label,
           entry: {
@@ -375,9 +308,9 @@ const generateMockData = (asset) => {
               rationale: 'Major psychological level',
             },
           ],
-          timeframe: 'MEDIUM_TERM',
+          timeframe: term,
           confidence: config.confidence.value,
-          keyRisks: config.riskFactors,
+          keyRisks: ['Market uncertainty', 'Economic data volatility'],
         },
       },
     },
@@ -484,9 +417,56 @@ const getYahooFinanceLink = (symbol) => {
   return `https://finance.yahoo.com/quote/${symbolMap[symbol] || symbol}`;
 };
 
+// Add at the top with other constants
+const TRADING_TERMS = {
+  INTRADAY: {
+    label: 'Intraday (1-8 hours)',
+    focus: 'Price action and momentum',
+    keyLevels: true,
+    indicators: ['RSI', 'MACD', 'Volume'],
+    riskManagement: 'Tight stops, quick profit taking',
+  },
+  SWING: {
+    label: 'Swing (2-5 days)',
+    focus: 'Trend and momentum shifts',
+    keyLevels: true,
+    indicators: ['EMA', 'RSI', 'MACD'],
+    riskManagement: 'Wider stops, trailing stops',
+  },
+  SHORT_TERM: {
+    label: 'Short Term (1-4 weeks)',
+    focus: 'Short-term trend following',
+    keyLevels: true,
+    indicators: ['EMA', 'RSI', 'MACD'],
+    riskManagement: 'Position sizing based on volatility',
+  },
+  MEDIUM_TERM: {
+    label: 'Medium Term (1-6 months)',
+    focus: 'Intermediate trend following',
+    keyLevels: true,
+    indicators: ['EMA', 'RSI', 'MACD'],
+    riskManagement: 'Pyramiding positions',
+  },
+  MEDIUM_LONG_TERM: {
+    label: 'Medium-Long Term (6-12 months)',
+    focus: 'Major trend following',
+    keyLevels: true,
+    indicators: ['EMA', 'RSI', 'MACD'],
+    riskManagement: 'Core and satellite positions',
+  },
+  LONG_TERM: {
+    label: 'Long Term (1+ years)',
+    focus: 'Strategic positioning',
+    keyLevels: true,
+    indicators: ['EMA', 'RSI', 'MACD'],
+    riskManagement: 'Portfolio balancing',
+  },
+};
+
 const MarketIntelligence = () => {
   const [selectedAsset, setSelectedAsset] = useState(availableAssets.Forex[0]);
-  const mockData = generateMockData(selectedAsset);
+  const [selectedTerm, setSelectedTerm] = useState('SWING');
+  const mockData = generateMockData(selectedAsset, selectedTerm);
 
   const renderTabContent = () => {
     return (
@@ -494,26 +474,43 @@ const MarketIntelligence = () => {
         {renderAssetSelector()}
 
         {/* Chart Section - Full Width */}
-        <div className='bg-gray-800 rounded-lg p-4 h-[500px]'>
-          <TradingViewChart symbol={selectedAsset.tradingViewSymbol} />
+        <div className='bg-gray-800 rounded-lg p-4'>
+          <div className='w-full h-[600px]'>
+            <TradingViewChart symbol={selectedAsset.tradingViewSymbol} />
+          </div>
         </div>
 
         {/* AI Analysis and Strategy Recommendation */}
         <div className='bg-gray-800 rounded-lg p-4 mb-4'>
           <h3 className='text-lg font-semibold text-blue-100 mb-4 flex justify-between items-center'>
             <span>AI Analysis & Strategy</span>
-            <span
-              className={`px-3 py-1 rounded-full text-sm ${
-                mockData.macro.aiAnalysis.recommendedStrategy.direction ===
-                'BULLISH'
-                  ? 'bg-green-900 text-green-200'
-                  : mockData.macro.aiAnalysis.recommendedStrategy.direction ===
-                    'BEARISH'
-                  ? 'bg-red-900 text-red-200'
-                  : 'bg-yellow-900 text-yellow-200'
-              }`}>
-              {mockData.macro.aiAnalysis.recommendedStrategy.direction}
-            </span>
+            <div className='flex items-center space-x-4'>
+              <div className='flex items-center space-x-2'>
+                <span className='text-sm text-gray-400'>Timeframe:</span>
+                <select
+                  value={selectedTerm}
+                  onChange={(e) => setSelectedTerm(e.target.value)}
+                  className='bg-gray-700 text-white px-3 py-1 rounded border border-gray-600 focus:outline-none focus:border-blue-500'>
+                  {Object.entries(TRADING_TERMS).map(([key, { label }]) => (
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <span
+                className={`px-3 py-1 rounded-full text-sm ${
+                  mockData.macro.aiAnalysis.recommendedStrategy.direction ===
+                  'BULLISH'
+                    ? 'bg-green-900 text-green-200'
+                    : mockData.macro.aiAnalysis.recommendedStrategy
+                        .direction === 'BEARISH'
+                    ? 'bg-red-900 text-red-200'
+                    : 'bg-yellow-900 text-yellow-200'
+                }`}>
+                {mockData.macro.aiAnalysis.recommendedStrategy.direction}
+              </span>
+            </div>
           </h3>
 
           <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
@@ -547,7 +544,7 @@ const MarketIntelligence = () => {
                   Recommended Strategy
                 </h4>
                 <span className='text-xs bg-blue-900 text-blue-200 px-2 py-1 rounded'>
-                  {mockData.macro.aiAnalysis.recommendedStrategy.timeframe}
+                  {selectedTerm}
                 </span>
               </div>
 
@@ -751,8 +748,8 @@ const MarketIntelligence = () => {
                   <div>
                     <span className='text-xs text-gray-400'>Resistance</span>
                     <div className='space-y-1 mt-1'>
-                      {mockData.analysis.aiAnalysis.technicalIndicators.keyLevels.resistance[0]
-                        .slice(0, 2)
+                      {mockData.analysis.aiAnalysis.keyLevels.resistance
+                        ?.slice(0, 2)
                         .map((level, idx) => (
                           <div
                             key={idx}
@@ -768,8 +765,8 @@ const MarketIntelligence = () => {
                   <div>
                     <span className='text-xs text-gray-400'>Support</span>
                     <div className='space-y-1 mt-1'>
-                      {mockData.analysis.aiAnalysis.technicalIndicators.keyLevels.support[0]
-                        .slice(0, 2)
+                      {mockData.analysis.aiAnalysis.keyLevels.support
+                        ?.slice(0, 2)
                         .map((level, idx) => (
                           <div
                             key={idx}
@@ -866,42 +863,80 @@ const MarketIntelligence = () => {
               Timeframe Analysis
             </h3>
             <div className='space-y-3'>
-              {Object.entries(mockData.analysis.aiAnalysis.timeframes).map(
-                ([timeframe, data]) => (
-                  <div key={timeframe} className='bg-gray-700 rounded-lg p-3'>
-                    <div className='flex justify-between items-center mb-2'>
-                      <span className='text-sm font-medium'>
-                        {timeframe.replace(/([A-Z])/g, ' $1').trim()}
-                      </span>
-                      <div className='flex space-x-2'>
-                        <span
-                          className={`px-2 py-1 rounded text-xs ${
-                            data.outlook === 'BULLISH'
-                              ? 'bg-green-900 text-green-200'
-                              : data.outlook === 'BEARISH'
-                              ? 'bg-red-900 text-red-200'
-                              : 'bg-yellow-900 text-yellow-200'
-                          }`}>
-                          {data.outlook}
-                        </span>
-                        <span className='text-xs bg-gray-600 px-2 py-1 rounded'>
-                          {data.probability}% Prob
-                        </span>
-                      </div>
-                    </div>
-                    <div className='grid grid-cols-2 gap-2 text-xs'>
-                      <div className='bg-gray-800 rounded p-2'>
-                        <span className='text-gray-400'>Target</span>
-                        <div className='font-medium'>{data.target}</div>
-                      </div>
-                      <div className='bg-gray-800 rounded p-2'>
-                        <span className='text-gray-400'>Timeframe</span>
-                        <div className='font-medium'>{data.timeframe}</div>
-                      </div>
-                    </div>
+              {/* Long Term */}
+              <div className='bg-gray-700 rounded-lg p-3'>
+                <div className='flex justify-between items-center mb-2'>
+                  <span className='text-sm font-medium'>long Term</span>
+                  <div className='flex space-x-2'>
+                    <span className='px-2 py-1 rounded text-xs bg-yellow-900 text-yellow-200'>
+                      NEUTRAL
+                    </span>
+                    <span className='text-xs bg-gray-600 px-2 py-1 rounded'>
+                      60% Prob
+                    </span>
                   </div>
-                )
-              )}
+                </div>
+                <div className='grid grid-cols-2 gap-2 text-xs'>
+                  <div className='bg-gray-800 rounded p-2'>
+                    <span className='text-gray-400'>Target</span>
+                    <div className='font-medium'>1.0950</div>
+                  </div>
+                  <div className='bg-gray-800 rounded p-2'>
+                    <span className='text-gray-400'>Timeframe</span>
+                    <div className='font-medium'>12-18 months</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mid Term */}
+              <div className='bg-gray-700 rounded-lg p-3'>
+                <div className='flex justify-between items-center mb-2'>
+                  <span className='text-sm font-medium'>Mid Term</span>
+                  <div className='flex space-x-2'>
+                    <span className='px-2 py-1 rounded text-xs bg-yellow-900 text-yellow-200'>
+                      NEUTRAL
+                    </span>
+                    <span className='text-xs bg-gray-600 px-2 py-1 rounded'>
+                      55% Prob
+                    </span>
+                  </div>
+                </div>
+                <div className='grid grid-cols-2 gap-2 text-xs'>
+                  <div className='bg-gray-800 rounded p-2'>
+                    <span className='text-gray-400'>Target</span>
+                    <div className='font-medium'>1.0850</div>
+                  </div>
+                  <div className='bg-gray-800 rounded p-2'>
+                    <span className='text-gray-400'>Timeframe</span>
+                    <div className='font-medium'>3-6 months</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Short Term */}
+              <div className='bg-gray-700 rounded-lg p-3'>
+                <div className='flex justify-between items-center mb-2'>
+                  <span className='text-sm font-medium'>Short Term</span>
+                  <div className='flex space-x-2'>
+                    <span className='px-2 py-1 rounded text-xs bg-yellow-900 text-yellow-200'>
+                      NEUTRAL
+                    </span>
+                    <span className='text-xs bg-gray-600 px-2 py-1 rounded'>
+                      50% Prob
+                    </span>
+                  </div>
+                </div>
+                <div className='grid grid-cols-2 gap-2 text-xs'>
+                  <div className='bg-gray-800 rounded p-2'>
+                    <span className='text-gray-400'>Target</span>
+                    <div className='font-medium'>1.0800</div>
+                  </div>
+                  <div className='bg-gray-800 rounded p-2'>
+                    <span className='text-gray-400'>Timeframe</span>
+                    <div className='font-medium'>1-2 weeks</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
