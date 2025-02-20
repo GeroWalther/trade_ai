@@ -470,34 +470,71 @@ const MarketIntelligence = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchEconomicData = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(
-          'http://localhost:5002/api/economic-indicators'
+  // Move fetchEconomicData outside useEffect so it can be used elsewhere
+  const fetchEconomicData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Get the category from selectedAsset
+      const category = Object.entries(availableAssets).find(([_, assets]) =>
+        assets.some((asset) => asset.symbol === selectedAsset.symbol)
+      )?.[0];
+
+      console.log('Selected Asset:', selectedAsset);
+      console.log('Available Assets:', availableAssets);
+      console.log('Found Category:', category);
+
+      // Make sure category exists before making the request
+      if (!category) {
+        throw new Error(
+          `Unable to determine category for ${selectedAsset.name}`
         );
-        const data = await response.json();
-
-        if (data.error) {
-          throw new Error(data.message || 'Failed to fetch economic data');
-        }
-
-        setEconomicData(data.economic_indicators);
-        setError(null);
-      } catch (err) {
-        setError(err.message || 'Failed to fetch economic data');
-        console.error('Economic Data Error:', err);
-      } finally {
-        setLoading(false);
       }
-    };
 
+      // Map frontend categories to backend categories
+      const categoryMap = {
+        Forex: 'Forex',
+        Commodities: 'Commodities',
+        Crypto: 'Crypto',
+        Indices: 'Indices',
+      };
+
+      const mappedCategory = categoryMap[category];
+      console.log('Mapped Category:', mappedCategory);
+
+      const response = await fetch(
+        `http://localhost:5002/api/economic-indicators?category=${encodeURIComponent(
+          mappedCategory
+        )}&symbol=${encodeURIComponent(selectedAsset.symbol)}`
+      );
+
+      const data = await response.json();
+      console.log('Received Data:', data);
+
+      if (data.error) {
+        throw new Error(data.message || 'Failed to fetch economic data');
+      }
+
+      setEconomicData(data.economic_indicators);
+
+      // If there's a message but no error, we can show it as a warning
+      if (data.message) {
+        console.warn('Server message:', data.message);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to fetch economic data');
+      console.error('Economic Data Error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchEconomicData();
-    // Refresh every hour
     const interval = setInterval(fetchEconomicData, 3600000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedAsset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const mockData = generateMockData(selectedAsset, selectedTerm);
 
@@ -1087,11 +1124,32 @@ const MarketIntelligence = () => {
     }
 
     if (error) {
-      return <div className='text-center text-red-500 py-4'>{error}</div>;
+      return (
+        <div className='bg-gray-800 p-4 rounded-lg'>
+          <div className='text-center text-red-500 py-4 flex flex-col items-center'>
+            <span className='text-lg mb-2'>Error loading economic data</span>
+            <span className='text-sm text-gray-400'>{error}</span>
+            <button
+              onClick={() => {
+                setError(null);
+                fetchEconomicData();
+              }}
+              className='mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors'>
+              Retry
+            </button>
+          </div>
+        </div>
+      );
     }
 
-    if (!economicData) {
-      return <div className='text-center py-4'>No economic data available</div>;
+    if (!economicData || economicData.length === 0) {
+      return (
+        <div className='bg-gray-800 p-4 rounded-lg'>
+          <div className='text-center text-gray-400 py-4'>
+            No economic indicators available for {selectedAsset.name}
+          </div>
+        </div>
+      );
     }
 
     return (
@@ -1100,12 +1158,22 @@ const MarketIntelligence = () => {
           <div key={idx} className='bg-gray-800 p-4 rounded-lg'>
             <div className='flex justify-between items-center mb-2'>
               <h3 className='text-lg font-semibold'>{indicator.name}</h3>
-              {indicator.impact === 'HIGH' && (
-                <span className='bg-red-500 text-xs px-2 py-1 rounded'>
-                  High Impact
-                </span>
-              )}
+              <div className='flex items-center space-x-2'>
+                <div className='group relative'>
+                  <span className='text-xs text-gray-400 cursor-help'>
+                    Importance: {indicator.importance}%
+                  </span>
+                  <div className='invisible group-hover:visible absolute z-10 w-64 p-2 mt-2 text-sm bg-gray-900 rounded-lg shadow-lg -right-2 top-full'>
+                    Importance ranking (0-100%) based on historical market
+                    impact and trading significance. Higher values indicate
+                    stronger market-moving potential.
+                  </div>
+                </div>
+              </div>
             </div>
+            <p className='text-sm text-gray-400 mb-2'>
+              {indicator.description}
+            </p>
             <div className='text-2xl font-bold mb-2'>
               {indicator.current.value}
               <span className='text-sm ml-2'>
@@ -1115,6 +1183,17 @@ const MarketIntelligence = () => {
             <div className='text-xs text-green-400 font-medium'>
               Latest Release:{' '}
               {new Date(indicator.current.date).toLocaleDateString()}
+            </div>
+            <div className='mt-2 text-xs text-blue-400 group relative cursor-help'>
+              <span>
+                Correlation: {(indicator.correlation * 100).toFixed(0)}%
+              </span>
+              <div className='invisible group-hover:visible absolute z-10 w-64 p-2 mt-2 text-sm bg-gray-900 rounded-lg shadow-lg'>
+                {indicator.correlation > 0
+                  ? `Positive correlation: When this indicator increases, ${selectedAsset.name} tends to increase as well.`
+                  : `Negative correlation: When this indicator increases, ${selectedAsset.name} tends to decrease.`}{' '}
+                Based on 5-year historical data.
+              </div>
             </div>
             <div className='mt-3 space-y-2'>
               <div className='text-sm font-medium text-gray-400'>
