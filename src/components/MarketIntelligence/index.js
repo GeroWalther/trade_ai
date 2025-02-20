@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TradingViewChart from './TradingViewChart';
 import ProgressBar from './ProgressBar';
 import { ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/solid';
@@ -466,6 +466,39 @@ const TRADING_TERMS = {
 const MarketIntelligence = () => {
   const [selectedAsset, setSelectedAsset] = useState(availableAssets.Forex[0]);
   const [selectedTerm, setSelectedTerm] = useState('SWING');
+  const [economicData, setEconomicData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchEconomicData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(
+          'http://localhost:5002/api/economic-indicators'
+        );
+        const data = await response.json();
+
+        if (data.error) {
+          throw new Error(data.message || 'Failed to fetch economic data');
+        }
+
+        setEconomicData(data.economic_indicators);
+        setError(null);
+      } catch (err) {
+        setError(err.message || 'Failed to fetch economic data');
+        console.error('Economic Data Error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEconomicData();
+    // Refresh every hour
+    const interval = setInterval(fetchEconomicData, 3600000);
+    return () => clearInterval(interval);
+  }, []);
+
   const mockData = generateMockData(selectedAsset, selectedTerm);
 
   const renderTabContent = () => {
@@ -1010,7 +1043,7 @@ const MarketIntelligence = () => {
         </div>
 
         {/* Economic Indicators Section */}
-        {renderEconomicIndicators(mockData.macro.indicators)}
+        {renderEconomicIndicators()}
       </div>
     );
   };
@@ -1046,126 +1079,64 @@ const MarketIntelligence = () => {
     </div>
   );
 
-  const renderEconomicIndicators = (indicators) => {
-    const getPercentageChange = (current, previous) => {
-      // Remove % signs and convert to numbers
-      const currentVal = parseFloat(current.replace('%', ''));
-      const previousVal = parseFloat(previous.replace('%', ''));
-      const change = currentVal - previousVal;
-      return {
-        value: Math.abs(change).toFixed(1),
-        direction: change > 0 ? 'up' : change < 0 ? 'down' : 'neutral',
-      };
-    };
+  const renderEconomicIndicators = () => {
+    if (loading) {
+      return (
+        <div className='text-center py-4'>Loading economic indicators...</div>
+      );
+    }
+
+    if (error) {
+      return <div className='text-center text-red-500 py-4'>{error}</div>;
+    }
+
+    if (!economicData) {
+      return <div className='text-center py-4'>No economic data available</div>;
+    }
 
     return (
-      <div className='bg-gray-800 rounded-lg p-4 mb-4'>
-        <h3 className='text-lg font-semibold text-blue-100 mb-4'>
-          Economic Indicators
-        </h3>
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-          {indicators.map((indicator, idx) => {
-            const change = getPercentageChange(
-              indicator.current,
-              indicator.previous[0]
-            );
-
-            return (
-              <div key={idx} className='bg-gray-700 rounded-lg p-3'>
-                <div className='flex justify-between items-start mb-2'>
-                  <h4 className='text-sm font-medium text-gray-300'>
-                    {indicator.name}
-                    {indicator.impact === 'HIGH' && (
-                      <span className='ml-2 text-xs bg-red-900 text-red-200 px-2 py-0.5 rounded'>
-                        High Impact
-                      </span>
-                    )}
-                  </h4>
-                </div>
-                <div className='space-y-2'>
-                  <div className='flex justify-between items-center'>
-                    <span className='text-xs text-gray-400'>Current</span>
-                    <div className='flex items-center space-x-2'>
-                      <span className='text-sm font-medium'>
-                        {indicator.current}
-                      </span>
-                      {change.direction !== 'neutral' && (
-                        <div
-                          className={`flex items-center text-xs ${
-                            change.direction === 'up'
-                              ? 'text-green-400'
-                              : 'text-red-400'
-                          }`}>
-                          {change.direction === 'up' ? (
-                            <ArrowUpIcon className='w-3 h-3 mr-0.5' />
-                          ) : (
-                            <ArrowDownIcon className='w-3 h-3 mr-0.5' />
-                          )}
-                          {change.value}%
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className='flex justify-between items-center'>
-                    <span className='text-xs text-gray-400'>Previous</span>
-                    <div className='text-right space-y-1'>
-                      {indicator.previous.map((value, i) => (
-                        <div
-                          key={i}
-                          className={`text-sm ${
-                            i === 0
-                              ? 'text-gray-300'
-                              : i === 1
-                              ? 'text-gray-400'
-                              : 'text-gray-500'
-                          }`}>
-                          {value}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  {indicator.forecast && (
-                    <div className='flex justify-between items-center'>
-                      <span className='text-xs text-gray-400'>Forecast</span>
-                      <div className='flex items-center space-x-2'>
-                        <span className='text-sm font-medium'>
-                          {indicator.forecast}
-                        </span>
-                        {(() => {
-                          const forecastChange = getPercentageChange(
-                            indicator.forecast,
-                            indicator.current
-                          );
-                          return (
-                            forecastChange.direction !== 'neutral' && (
-                              <div
-                                className={`flex items-center text-xs ${
-                                  forecastChange.direction === 'up'
-                                    ? 'text-green-400'
-                                    : 'text-red-400'
-                                }`}>
-                                {forecastChange.direction === 'up' ? (
-                                  <ArrowUpIcon className='w-3 h-3 mr-0.5' />
-                                ) : (
-                                  <ArrowDownIcon className='w-3 h-3 mr-0.5' />
-                                )}
-                                {forecastChange.value}%
-                              </div>
-                            )
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  )}
-                  <div className='flex justify-between items-center'>
-                    <span className='text-xs text-gray-400'>Next Release</span>
-                    <span className='text-sm'>{indicator.nextRelease}</span>
-                  </div>
-                </div>
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+        {economicData.map((indicator, idx) => (
+          <div key={idx} className='bg-gray-800 p-4 rounded-lg'>
+            <div className='flex justify-between items-center mb-2'>
+              <h3 className='text-lg font-semibold'>{indicator.name}</h3>
+              {indicator.impact === 'HIGH' && (
+                <span className='bg-red-500 text-xs px-2 py-1 rounded'>
+                  High Impact
+                </span>
+              )}
+            </div>
+            <div className='text-2xl font-bold mb-2'>
+              {indicator.current.value}
+              <span className='text-sm ml-2'>
+                {indicator.trend === 'INCREASING' ? '↑' : '↓'}
+              </span>
+            </div>
+            <div className='text-xs text-green-400 font-medium'>
+              Latest Release:{' '}
+              {new Date(indicator.current.date).toLocaleDateString()}
+            </div>
+            <div className='mt-3 space-y-2'>
+              <div className='text-sm font-medium text-gray-400'>
+                Historical Data:
               </div>
-            );
-          })}
-        </div>
+              {indicator.previous.map((prev, i) => (
+                <div key={i} className='text-sm text-gray-400'>
+                  {prev.value}
+                  <span className='text-xs text-gray-500 ml-2'>
+                    ({new Date(prev.date).toLocaleDateString()})
+                  </span>
+                </div>
+              ))}
+            </div>
+            {indicator.nextRelease && (
+              <div className='text-xs text-blue-400 mt-3'>
+                Next Release:{' '}
+                {new Date(indicator.nextRelease).toLocaleDateString()}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     );
   };
