@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import tradingService from '../services/trading_service';
+import TradingService from '../services/trading_service';
 import MarketOverview from './MarketOverview';
 import MarketIntelligence from './MarketIntelligence';
 import BotMonitor from './BotMonitor';
@@ -11,7 +11,7 @@ const TradingStatus = () => {
 
   const fetchData = async () => {
     try {
-      const data = await tradingService.getTradingStatus();
+      const data = await TradingService.getTradingStatus();
       setTradingStatus(data);
       setError(null);
     } catch (err) {
