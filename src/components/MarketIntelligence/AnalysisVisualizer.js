@@ -21,10 +21,10 @@ const AnalysisVisualizer = ({ analysis }) => {
 
   return (
     <div className='bg-[#1a1f3c] p-4 rounded-lg space-y-6'>
-      <TradingViewChart
+      {/* <TradingViewChart
         symbol={`FX:${getTradingViewSymbol(symbol)}`}
         theme='dark'
-      />
+      /> */}
 
       {/* Probability and Confidence Gauge */}
       <div className='grid grid-cols-2 gap-4'>
