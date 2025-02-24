@@ -4,6 +4,7 @@ import { config } from '../../config';
 import axios from 'axios';
 import analysisService from '../../services/analysis_service';
 import { shell } from 'electron';
+import IndicatorCard from './IndicatorCard.jsx';
 
 const availableAssets = {
   Forex: [
@@ -213,12 +214,65 @@ const getEMASignal = (ema, currentPrice) => {
   return currentPrice > ema ? 'Support' : 'Resistance';
 };
 
+// Helper function to get relevant indicators based on asset type
+const getRelevantIndicators = (indicators, asset) => {
+  if (!indicators || !asset) return {};
+
+  // Core indicators always shown
+  const coreIndicators = [
+    'cpi', // CPI
+    'core_cpi', // Core CPI
+    'fed_rate', // Fed Funds Rate
+    'unemployment', // Unemployment Rate
+    'nfp', // Non-Farm Payrolls
+    'consumer_conf', // Consumer Confidence
+    'repo_liquidity', // Repo Market Liquidity
+  ];
+
+  // Asset-specific indicators
+  const assetSpecificIndicators = {
+    Forex: [
+      'trade_balance', // Trade Balance
+      'ecb_rate', // ECB Rate
+      'boj_rate', // Japan Rate
+      'current_account', // Current Account
+    ],
+    Gold: [
+      'real_rate', // Real Interest Rate
+      'dxy_index', // Dollar Index
+      'inflation_exp_5y', // 5Y Inflation Expectations
+      'm2_supply', // M2 Money Supply
+    ],
+    Oil: [
+      'oil_inventory', // EIA Crude Inventories
+      'industrial_prod', // Industrial Production
+      'global_gdp', // Global GDP Growth
+      'dxy_index', // Dollar Strength
+    ],
+  };
+
+  // Combine core and asset-specific indicators
+  const relevantIds = [
+    ...coreIndicators,
+    ...(assetSpecificIndicators[asset.type] || []),
+  ];
+
+  return Object.entries(indicators)
+    .filter(([key]) => relevantIds.includes(key))
+    .reduce((acc, [key, value]) => {
+      acc[key] = value;
+      return acc;
+    }, {});
+};
+
 const MarketIntelligence = () => {
   const [selectedAsset, setSelectedAsset] = useState(availableAssets.Forex[0]);
   const [selectedTerm, setSelectedTerm] = useState('SWING');
   const [riskLevel, setRiskLevel] = useState('LOW');
   const [loading, setLoading] = useState(false);
   const [analysisStatus, setAnalysisStatus] = useState('');
+  const [macroIndicators, setMacroIndicators] = useState(null);
+  const [error, setError] = useState(null);
 
   // Initialize analysis from localStorage if available
   const [analysis, setAnalysis] = useState(() => {
@@ -248,6 +302,28 @@ const MarketIntelligence = () => {
       );
     }
   }, [analysis, selectedAsset.symbol, selectedTerm, riskLevel]);
+
+  const fetchMacroIndicators = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await axios.get(
+        `${config.api.baseUrl}/api/economic-indicators` // Remove asset_type parameter
+      );
+      if (response.data) {
+        setMacroIndicators(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching macro indicators:', error);
+      setError('Failed to load economic indicators');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMacroIndicators();
+  }, []); // Remove selectedAsset dependency
 
   const handleAssetChange = (e) => {
     const [category, symbol] = e.target.value.split('|');
@@ -305,6 +381,11 @@ const MarketIntelligence = () => {
   const clearAnalysisCache = () => {
     localStorage.removeItem('marketAnalysis');
     setAnalysis(null);
+  };
+
+  // Helper function to check if asset is Forex
+  const isForexPair = (asset) => {
+    return asset?.type === 'Forex';
   };
 
   return (
@@ -370,6 +451,32 @@ const MarketIntelligence = () => {
             )}
           </div>
         </div>
+
+        {/* Loading and Error States */}
+        {loading && (
+          <div className='text-blue-400 text-center py-4'>
+            Loading indicators...
+          </div>
+        )}
+        {error && (
+          <div className='text-red-400 bg-red-900/50 p-4 rounded-lg'>
+            {error}
+          </div>
+        )}
+
+        {/* Macro Indicators Section */}
+        {!loading && !error && macroIndicators && (
+          <div className='space-y-6'>
+            {/* Single grid for all indicators */}
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+              {Object.entries(
+                getRelevantIndicators(macroIndicators, selectedAsset)
+              ).map(([key, indicator]) => (
+                <IndicatorCard key={key} indicator={indicator} />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* <div className='w-full h-[800px] bg-gray-800 rounded-lg p-4'>
           <TradingViewChart symbol={selectedAsset.tradingViewSymbol} 
