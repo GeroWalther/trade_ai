@@ -3,6 +3,7 @@ import TradingViewChart from './TradingViewChart';
 import { config } from '../../config';
 import axios from 'axios';
 import analysisService from '../../services/analysis_service';
+import { shell } from 'electron';
 
 const availableAssets = {
   Forex: [
@@ -580,49 +581,134 @@ const MarketIntelligence = () => {
       )}
 
       {/* Test button */}
-      <button
-        onClick={async () => {
-          try {
-            setLoading(true);
-            setAnalysisStatus('Fetching indicators...');
-
-            // Use the symbol directly since it's already in OANDA format
-            const symbol = selectedAsset.symbol;
-
-            const response = await axios.get(
-              `${config.api.baseUrl}/api/test-indicators/${symbol}`
-            );
-            console.log('Technical Indicators Response:', response.data);
-
-            if (response.data.status === 'success') {
-              setAnalysis({
-                technical_indicators: response.data.data,
-                timestamp: new Date().toISOString(),
-              });
-              setAnalysisStatus('');
-            } else {
-              const message = response.data.message;
-              setAnalysisStatus(
-                message.includes('Invalid or unsupported symbol')
-                  ? `Asset ${selectedAsset.name} not supported`
-                  : message || 'Failed to get indicators'
+      <div className='flex gap-4'>
+        <button
+          onClick={async () => {
+            try {
+              setLoading(true);
+              setAnalysisStatus('Fetching indicators...');
+              const symbol = selectedAsset.symbol;
+              const response = await axios.get(
+                `${config.api.baseUrl}/api/test-indicators/${symbol}`
               );
+              console.log('Technical Indicators Response:', response.data);
+
+              if (response.data.status === 'success') {
+                setAnalysis({
+                  technical_indicators: response.data.data,
+                  timestamp: new Date().toISOString(),
+                });
+                setAnalysisStatus('');
+              } else {
+                const message = response.data.message;
+                setAnalysisStatus(
+                  message.includes('Invalid or unsupported symbol')
+                    ? `Asset ${selectedAsset.name} not supported`
+                    : message || 'Failed to get indicators'
+                );
+              }
+            } catch (error) {
+              console.error('Test error:', error);
+              setAnalysisStatus(
+                error.response?.data?.message ||
+                  error.message ||
+                  'Failed to fetch indicators'
+              );
+            } finally {
+              setLoading(false);
             }
-          } catch (error) {
-            console.error('Test error:', error);
-            setAnalysisStatus(
-              error.response?.data?.message ||
-                error.message ||
-                'Failed to fetch indicators'
-            );
-          } finally {
-            setLoading(false);
-          }
-        }}
-        disabled={loading}
-        className='bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors'>
-        {loading ? 'Loading...' : 'Test Indicators'}
-      </button>
+          }}
+          disabled={loading}
+          className='bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors'>
+          {loading ? 'Loading...' : 'Test Indicators'}
+        </button>
+
+        <button
+          onClick={async () => {
+            try {
+              setLoading(true);
+              setAnalysisStatus('Fetching news...');
+              const symbol = selectedAsset.symbol;
+              const response = await axios.get(
+                `${config.api.baseUrl}/api/news/${symbol}`
+              );
+              console.log('News Response:', response.data);
+
+              if (response.data.status === 'success') {
+                setAnalysis((prev) => ({
+                  ...prev,
+                  news: response.data.data,
+                  newsTimestamp: new Date().toISOString(),
+                }));
+                setAnalysisStatus('');
+              } else {
+                setAnalysisStatus(
+                  response.data.message || 'Failed to fetch news'
+                );
+              }
+            } catch (error) {
+              console.error('News fetch error:', error);
+              setAnalysisStatus(
+                error.response?.data?.message ||
+                  error.message ||
+                  'Failed to fetch news'
+              );
+            } finally {
+              setLoading(false);
+            }
+          }}
+          disabled={loading}
+          className='bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors'>
+          {loading ? 'Loading...' : 'Fetch News'}
+        </button>
+      </div>
+
+      {/* News Display Section */}
+      {analysis?.news && analysis.news.length > 0 && (
+        <div className='bg-gray-800 p-6 rounded-lg mt-6'>
+          <h3 className='text-xl font-semibold text-blue-100 mb-4'>
+            Market News
+          </h3>
+          <div className='space-y-4'>
+            {analysis.news.map((article, idx) => (
+              <div key={idx} className='bg-gray-700 p-4 rounded'>
+                <div className='flex justify-between items-start gap-4'>
+                  <h4 className='text-lg font-medium text-blue-200 mb-2'>
+                    {article.title}
+                  </h4>
+                  <button
+                    onClick={() => shell.openExternal(article.url)}
+                    className='text-blue-400 hover:text-blue-300 text-sm whitespace-nowrap'>
+                    Read More →
+                  </button>
+                </div>
+                <p className='text-gray-300 mb-2'>{article.description}</p>
+                <div className='flex justify-between items-center text-sm'>
+                  <span
+                    className={`px-2 py-1 rounded ${
+                      article.sentiment > 0
+                        ? 'bg-green-900 text-green-200'
+                        : article.sentiment < 0
+                        ? 'bg-red-900 text-red-200'
+                        : 'bg-gray-600 text-gray-300'
+                    }`}>
+                    Sentiment:{' '}
+                    {article.sentiment > 0
+                      ? 'Positive'
+                      : article.sentiment < 0
+                      ? 'Negative'
+                      : 'Neutral'}
+                  </span>
+                  <div className='text-gray-400 flex flex-col items-end'>
+                    <span>{article.source}</span>
+                    <span>{article.formatted_date}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
