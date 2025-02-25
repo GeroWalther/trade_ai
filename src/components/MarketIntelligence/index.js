@@ -272,38 +272,70 @@ const MarketIntelligence = () => {
     category: 'Forex',
   });
   const [indicators, setIndicators] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedTerm, setSelectedTerm] = useState('SWING');
   const [riskLevel, setRiskLevel] = useState('LOW');
+  const [marketData, setMarketData] = useState({
+    trends: {},
+    lastUpdate: null,
+    historicalData: {},
+  });
 
-  // Single fetch for all indicators once on mount
-  useEffect(() => {
-    const fetchIndicators = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const fetchIndicators = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(
+        `${config.api.baseUrl}/api/economic-indicators`
+      );
 
-        // Get all indicators in one request
-        const response = await axios.get(
-          `${config.api.baseUrl}/api/economic-indicators` // No params needed
-        );
+      // Process and store market data
+      const trends = {};
+      const historical = {};
 
-        if (response.data) {
-          setIndicators(response.data);
+      Object.entries(response.data).forEach(([key, indicator]) => {
+        trends[key] = indicator.trend;
+        historical[key] = indicator.historical_data;
+
+        // Log changes to console
+        if (indicator.historical_data && indicator.historical_data.length > 1) {
+          const current = parseFloat(indicator.value);
+          const previous = parseFloat(indicator.historical_data[1].value);
+          const change = (((current - previous) / previous) * 100).toFixed(2);
+          console.log(
+            `${indicator.name}: ${indicator.trend.toUpperCase()} (${change}%)`
+          );
         }
-      } catch (error) {
-        console.error('Error fetching indicators:', error);
-        setError(
-          'Failed to load economic indicators. Please check if the AI analysis server is running.'
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+      });
 
+      setMarketData({
+        trends,
+        historicalData: historical,
+        lastUpdate: new Date().toISOString(),
+      });
+
+      setIndicators(response.data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching indicators:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchIndicators();
-  }, []); // Only fetch once on mount
+  }, []);
+
+  const handleClearCache = async () => {
+    try {
+      await axios.post(`${config.api.baseUrl}/api/clear-cache`);
+      fetchIndicators();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   // Map trading asset categories to FRED categories
   const getFredCategory = (assetCategory, assetType) => {
@@ -325,7 +357,13 @@ const MarketIntelligence = () => {
     }
   };
 
-  // Filter asset indicators based on asset type
+  // Filter indicators based on category
+  const coreIndicators = indicators
+    ? Object.entries(indicators)
+        .filter(([key, value]) => value !== null && value.category === 'core')
+        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
+    : null;
+
   const assetIndicators = indicators
     ? Object.entries(indicators)
         .filter(
@@ -334,13 +372,6 @@ const MarketIntelligence = () => {
             value.category ===
               getFredCategory(selectedAsset.category, selectedAsset.type)
         )
-        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
-    : null;
-
-  // Get core indicators
-  const coreIndicators = indicators
-    ? Object.entries(indicators)
-        .filter(([key, value]) => value !== null && value.category === 'core')
         .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
     : null;
 
@@ -443,12 +474,6 @@ const MarketIntelligence = () => {
     }
   };
 
-  // Add a clear cache button
-  const clearAnalysisCache = () => {
-    localStorage.removeItem('marketAnalysis');
-    setAnalysis(null);
-  };
-
   // Helper function to check if asset is Forex
   const isForexPair = (asset) => {
     return asset?.type === 'Forex';
@@ -508,7 +533,7 @@ const MarketIntelligence = () => {
               {loading ? 'Analyzing...' : 'AI Analysis'}
             </button>
             <button
-              onClick={clearAnalysisCache}
+              onClick={handleClearCache}
               className='text-gray-400 hover:text-gray-300 text-sm'>
               Clear Cache
             </button>
@@ -517,18 +542,6 @@ const MarketIntelligence = () => {
             )}
           </div>
         </div>
-
-        {/* Loading and Error States */}
-        {loading && (
-          <div className='text-blue-400 text-center py-4'>
-            Loading indicators...
-          </div>
-        )}
-        {error && (
-          <div className='text-red-400 bg-red-900/50 p-4 rounded-lg'>
-            {error}
-          </div>
-        )}
 
         {/* Display Asset-Specific Indicators first */}
         {loading ? (
@@ -554,11 +567,15 @@ const MarketIntelligence = () => {
         {!loading && hasValidCoreIndicators && (
           <div className='mt-6 bg-gray-800 rounded-lg p-6'>
             <h3 className='text-xl font-bold text-blue-100 mb-4'>
-              Core Economic Indicators
+              Macro Economic Indicators
             </h3>
             <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
               {Object.entries(coreIndicators).map(([key, indicator]) => (
-                <IndicatorCard key={key} indicator={indicator} />
+                <IndicatorCard
+                  key={key}
+                  indicator={indicator}
+                  trend={marketData.trends[key]}
+                />
               ))}
             </div>
           </div>
