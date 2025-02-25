@@ -479,6 +479,80 @@ const MarketIntelligence = () => {
     return asset?.type === 'Forex';
   };
 
+  const groupIndicatorsByCategory = (indicators) => {
+    // Initialize all possible categories
+    const categories = {
+      market_liquidity: [],
+      credit_markets: [],
+      market_breadth: [],
+      valuations: [],
+      sentiment: [],
+      forex_rates: [],
+      central_banks: [],
+      exchange_rates: [],
+      capital_flows: [],
+      forex_risk: [],
+      positioning: [],
+      energy_markets: [],
+      precious_metals: [],
+      real_rates: [],
+      currency_strength: [],
+      global_demand: [],
+      other: [], // Important: Add 'other' category for uncategorized indicators
+    };
+
+    if (!indicators) return categories;
+
+    Object.entries(indicators).forEach(([key, indicator]) => {
+      const category = indicator.category || 'other';
+      // Ensure category exists, fallback to 'other' if not
+      if (!categories[category]) {
+        categories[category] = [];
+        console.warn(`Unknown category: ${category} for indicator: ${key}`);
+      }
+      categories[category].push({ key, ...indicator });
+    });
+
+    return categories;
+  };
+
+  const categoryTitles = {
+    market_liquidity: 'Market Liquidity',
+    credit_markets: 'Credit Markets',
+    market_breadth: 'Market Breadth',
+    valuations: 'Valuations & Growth',
+    sentiment: 'Market Sentiment',
+    forex_rates: 'Interest Rate Differentials',
+    central_banks: 'Central Bank Balance Sheets',
+    exchange_rates: 'Exchange Rate Metrics',
+    capital_flows: 'Capital Flows & Holdings',
+    forex_risk: 'Risk & Uncertainty',
+    positioning: 'Market Positioning',
+    energy_markets: 'Energy Markets',
+    precious_metals: 'Precious Metals',
+    real_rates: 'Real Interest Rates',
+    currency_strength: 'Currency Strength',
+    global_demand: 'Global Demand',
+    other: 'Other Indicators', // Add title for 'other' category
+  };
+
+  const categoryDescriptions = {
+    forex_rates: 'Key interest rates from major central banks',
+    central_banks: 'Total assets and monetary policy actions',
+    exchange_rates: 'Real effective exchange rates and trade-weighted indices',
+    capital_flows: 'International capital movements and treasury holdings',
+    forex_risk: 'Geopolitical and policy uncertainty metrics',
+    positioning: 'Commitment of Traders and speculative positions',
+    energy_markets: 'Oil inventories, production, and rig counts',
+    precious_metals: 'Gold and silver prices, ETF holdings, and reserves',
+    real_rates: 'Inflation-adjusted interest rates and breakeven rates',
+    currency_strength: 'Dollar indices and major currency pairs',
+    global_demand: 'Global trade and major economies import data',
+    other: 'Additional market indicators', // Add description for 'other' category
+  };
+
+  const groupedIndicators = groupIndicatorsByCategory(indicators);
+
   return (
     <div className='p-4 space-y-6 bg-gray-900'>
       {/* Asset Selector and Controls */}
@@ -918,6 +992,40 @@ const MarketIntelligence = () => {
             ))}
           </div>
         </div>
+      )}
+
+      {loading ? (
+        <div className='flex justify-center items-center h-64'>
+          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400'></div>
+        </div>
+      ) : (
+        Object.entries(groupedIndicators).map(
+          ([category, categoryIndicators]) =>
+            categoryIndicators.length > 0 && (
+              <div key={category} className='mb-8'>
+                <div className='mb-4'>
+                  <h3 className='text-xl font-semibold text-blue-100'>
+                    {categoryTitles[category] ||
+                      category.replace('_', ' ').title()}
+                  </h3>
+                  {categoryDescriptions[category] && (
+                    <p className='text-sm text-gray-400 mt-1'>
+                      {categoryDescriptions[category]}
+                    </p>
+                  )}
+                </div>
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                  {categoryIndicators.map((indicator) => (
+                    <IndicatorCard
+                      key={indicator.key}
+                      indicator={indicator}
+                      trend={marketData.trends[indicator.key]}
+                    />
+                  ))}
+                </div>
+              </div>
+            )
+        )
       )}
     </div>
   );
