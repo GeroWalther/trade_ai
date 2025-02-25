@@ -266,26 +266,109 @@ const getRelevantIndicators = (indicators, asset) => {
 };
 
 const MarketIntelligence = () => {
-  const [selectedAsset, setSelectedAsset] = useState(availableAssets.Forex[0]);
+  const [selectedAsset, setSelectedAsset] = useState({
+    symbol: 'EUR_USD',
+    name: 'EUR/USD',
+    category: 'Forex',
+  });
+  const [indicators, setIndicators] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [selectedTerm, setSelectedTerm] = useState('SWING');
   const [riskLevel, setRiskLevel] = useState('LOW');
-  const [loading, setLoading] = useState(false);
+
+  // Single fetch for all indicators once on mount
+  useEffect(() => {
+    const fetchIndicators = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Get all indicators in one request
+        const response = await axios.get(
+          `${config.api.tradingUrl}/api/economic-indicators`,
+          {
+            params: {
+              asset_type: selectedAsset.category.toLowerCase(),
+              core: false, // Get both core and asset-specific indicators
+            },
+          }
+        );
+
+        if (response.data) {
+          setIndicators(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching indicators:', error);
+        setError(
+          'Failed to load economic indicators. Please check if the trading server is running.'
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchIndicators();
+  }, []); // Only fetch once on mount
+
+  // Split indicators into core and asset-specific for display
+  const coreIndicators = indicators
+    ? Object.entries(indicators)
+        .filter(([key]) =>
+          [
+            'cpi',
+            'core_cpi',
+            'fed_rate',
+            'unemployment',
+            'nfp',
+            'consumer_conf',
+            'repo_liquidity',
+          ].includes(key)
+        )
+        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
+    : null;
+
+  const assetIndicators = indicators
+    ? Object.entries(indicators)
+        .filter(
+          ([key]) =>
+            ![
+              'cpi',
+              'core_cpi',
+              'fed_rate',
+              'unemployment',
+              'nfp',
+              'consumer_conf',
+              'repo_liquidity',
+            ].includes(key)
+        )
+        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
+    : null;
+
   const [analysisStatus, setAnalysisStatus] = useState('');
-  const [macroIndicators, setMacroIndicators] = useState(null);
-  const [error, setError] = useState(null);
+  const [analysis, setAnalysis] = useState(null);
 
   // Initialize analysis from localStorage if available
-  const [analysis, setAnalysis] = useState(() => {
-    const savedAnalysis = localStorage.getItem('marketAnalysis');
-    if (savedAnalysis) {
-      const parsed = JSON.parse(savedAnalysis);
-      // Check if analysis is still valid (less than 1 hour old)
-      if (Date.now() - parsed.timestamp < 3600000) {
-        return parsed.data;
+  useEffect(() => {
+    const fetchAnalysis = async () => {
+      const savedAnalysis = localStorage.getItem('marketAnalysis');
+      if (savedAnalysis) {
+        const parsed = JSON.parse(savedAnalysis);
+        if (
+          parsed.asset === selectedAsset.symbol &&
+          parsed.term === selectedTerm &&
+          parsed.risk === riskLevel &&
+          Date.now() - parsed.timestamp < 3600000 // Less than 1 hour old
+        ) {
+          setAnalysis(parsed.data);
+        } else {
+          setAnalysis(null);
+        }
       }
-    }
-    return null;
-  });
+    };
+
+    fetchAnalysis();
+  }, [selectedAsset.symbol, selectedTerm, riskLevel]);
 
   // Save analysis to localStorage whenever it changes
   useEffect(() => {
@@ -302,28 +385,6 @@ const MarketIntelligence = () => {
       );
     }
   }, [analysis, selectedAsset.symbol, selectedTerm, riskLevel]);
-
-  const fetchMacroIndicators = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await axios.get(
-        `${config.api.baseUrl}/api/economic-indicators` // Remove asset_type parameter
-      );
-      if (response.data) {
-        setMacroIndicators(response.data);
-      }
-    } catch (error) {
-      console.error('Error fetching macro indicators:', error);
-      setError('Failed to load economic indicators');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchMacroIndicators();
-  }, []); // Remove selectedAsset dependency
 
   const handleAssetChange = (e) => {
     const [category, symbol] = e.target.value.split('|');
@@ -464,14 +525,36 @@ const MarketIntelligence = () => {
           </div>
         )}
 
-        {/* Macro Indicators Section */}
-        {!loading && !error && macroIndicators && (
-          <div className='space-y-6'>
-            {/* Single grid for all indicators */}
+        {/* Display Core Indicators with loading state */}
+        {loading ? (
+          <div className='mt-6 bg-gray-800 rounded-lg p-6'>
+            <div className='animate-pulse text-blue-300'>
+              Loading indicators...
+            </div>
+          </div>
+        ) : (
+          coreIndicators && (
+            <div className='mt-6 bg-gray-800 rounded-lg p-6'>
+              <h3 className='text-xl font-bold text-blue-100 mb-4'>
+                Core Economic Indicators
+              </h3>
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                {Object.entries(coreIndicators).map(([key, indicator]) => (
+                  <IndicatorCard key={key} indicator={indicator} />
+                ))}
+              </div>
+            </div>
+          )
+        )}
+
+        {/* Display Asset-Specific Indicators */}
+        {assetIndicators && Object.keys(assetIndicators).length > 0 && (
+          <div className='mt-6 bg-gray-800 rounded-lg p-6'>
+            <h3 className='text-xl font-bold text-blue-100 mb-4'>
+              {selectedAsset.name} Specific Indicators
+            </h3>
             <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-              {Object.entries(
-                getRelevantIndicators(macroIndicators, selectedAsset)
-              ).map(([key, indicator]) => (
+              {Object.entries(assetIndicators).map(([key, indicator]) => (
                 <IndicatorCard key={key} indicator={indicator} />
               ))}
             </div>
