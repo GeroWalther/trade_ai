@@ -533,7 +533,7 @@ const MarketIntelligence = () => {
     real_rates: 'Real Interest Rates',
     currency_strength: 'Currency Strength',
     global_demand: 'Global Demand',
-    other: 'Other Indicators', // Add title for 'other' category
+    other: 'Macro Economic Indicators', // Add title for 'other' category
   };
 
   const categoryDescriptions = {
