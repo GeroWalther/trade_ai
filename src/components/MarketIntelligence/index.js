@@ -286,13 +286,7 @@ const MarketIntelligence = () => {
 
         // Get all indicators in one request
         const response = await axios.get(
-          `${config.api.tradingUrl}/api/economic-indicators`,
-          {
-            params: {
-              asset_type: selectedAsset.category.toLowerCase(),
-              core: false, // Get both core and asset-specific indicators
-            },
-          }
+          `${config.api.baseUrl}/api/economic-indicators` // No params needed
         );
 
         if (response.data) {
@@ -301,7 +295,7 @@ const MarketIntelligence = () => {
       } catch (error) {
         console.error('Error fetching indicators:', error);
         setError(
-          'Failed to load economic indicators. Please check if the trading server is running.'
+          'Failed to load economic indicators. Please check if the AI analysis server is running.'
         );
       } finally {
         setLoading(false);
@@ -311,39 +305,50 @@ const MarketIntelligence = () => {
     fetchIndicators();
   }, []); // Only fetch once on mount
 
-  // Split indicators into core and asset-specific for display
-  const coreIndicators = indicators
+  // Map trading asset categories to FRED categories
+  const getFredCategory = (assetCategory, assetType) => {
+    switch (assetCategory.toLowerCase()) {
+      case 'forex':
+        return 'forex';
+      case 'commodities':
+        if (assetType === 'Gold' || assetType === 'Silver') {
+          return 'precious_metals';
+        }
+        if (assetType === 'Oil') {
+          return 'oil';
+        }
+        return 'commodities';
+      case 'indices':
+        return 'stocks';
+      default:
+        return assetCategory.toLowerCase();
+    }
+  };
+
+  // Filter asset indicators based on asset type
+  const assetIndicators = indicators
     ? Object.entries(indicators)
-        .filter(([key]) =>
-          [
-            'cpi',
-            'core_cpi',
-            'fed_rate',
-            'unemployment',
-            'nfp',
-            'consumer_conf',
-            'repo_liquidity',
-          ].includes(key)
+        .filter(
+          ([key, value]) =>
+            value !== null &&
+            value.category ===
+              getFredCategory(selectedAsset.category, selectedAsset.type)
         )
         .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
     : null;
 
-  const assetIndicators = indicators
+  // Get core indicators
+  const coreIndicators = indicators
     ? Object.entries(indicators)
-        .filter(
-          ([key]) =>
-            ![
-              'cpi',
-              'core_cpi',
-              'fed_rate',
-              'unemployment',
-              'nfp',
-              'consumer_conf',
-              'repo_liquidity',
-            ].includes(key)
-        )
+        .filter(([key, value]) => value !== null && value.category === 'core')
         .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
     : null;
+
+  // Add check before rendering
+  const hasValidCoreIndicators =
+    coreIndicators && Object.keys(coreIndicators).length > 0;
+  const hasValidAssetIndicators =
+    assetIndicators && Object.keys(assetIndicators).length > 0;
 
   const [analysisStatus, setAnalysisStatus] = useState('');
   const [analysis, setAnalysis] = useState(null);
@@ -525,36 +530,34 @@ const MarketIntelligence = () => {
           </div>
         )}
 
-        {/* Display Core Indicators with loading state */}
+        {/* Display Asset-Specific Indicators first */}
         {loading ? (
           <div className='mt-6 bg-gray-800 rounded-lg p-6'>
             <div className='animate-pulse text-blue-300'>
               Loading indicators...
             </div>
           </div>
-        ) : (
-          coreIndicators && (
-            <div className='mt-6 bg-gray-800 rounded-lg p-6'>
-              <h3 className='text-xl font-bold text-blue-100 mb-4'>
-                Core Economic Indicators
-              </h3>
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                {Object.entries(coreIndicators).map(([key, indicator]) => (
-                  <IndicatorCard key={key} indicator={indicator} />
-                ))}
-              </div>
-            </div>
-          )
-        )}
-
-        {/* Display Asset-Specific Indicators */}
-        {assetIndicators && Object.keys(assetIndicators).length > 0 && (
+        ) : hasValidAssetIndicators ? (
           <div className='mt-6 bg-gray-800 rounded-lg p-6'>
             <h3 className='text-xl font-bold text-blue-100 mb-4'>
               {selectedAsset.name} Specific Indicators
             </h3>
             <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
               {Object.entries(assetIndicators).map(([key, indicator]) => (
+                <IndicatorCard key={key} indicator={indicator} />
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Display Core Indicators below */}
+        {!loading && hasValidCoreIndicators && (
+          <div className='mt-6 bg-gray-800 rounded-lg p-6'>
+            <h3 className='text-xl font-bold text-blue-100 mb-4'>
+              Core Economic Indicators
+            </h3>
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+              {Object.entries(coreIndicators).map(([key, indicator]) => (
                 <IndicatorCard key={key} indicator={indicator} />
               ))}
             </div>

@@ -1,38 +1,49 @@
 import React from 'react';
 
-const IndicatorCard = ({ indicator }) => (
-  <div className='bg-gray-800 p-4 rounded-lg'>
-    <div className='flex justify-between items-start'>
-      <h3 className='text-lg font-semibold text-blue-200'>{indicator.name}</h3>
-      <span className='text-gray-400'>Importance: {indicator.importance}%</span>
-    </div>
-    <p className='text-gray-400 text-sm'>{indicator.description}</p>
-    <div className='mt-4'>
-      <div className='flex items-baseline'>
-        <span className='text-3xl font-bold text-white'>{indicator.value}</span>
+const IndicatorCard = ({ indicator }) => {
+  // Add defensive check
+  if (!indicator) {
+    return null; // Or return a loading/error state
+  }
+
+  const {
+    name = 'Unknown',
+    description = '',
+    value = '0.00%',
+    trend = 'neutral',
+    importance = 0,
+    correlation = 0,
+    latest_release = '',
+    historical_data = [],
+  } = indicator;
+
+  return (
+    <div className='bg-gray-700 p-4 rounded-lg'>
+      <div className='flex justify-between items-start mb-2'>
+        <h4 className='text-lg font-medium text-blue-200'>{name}</h4>
         <span
-          className={`text-xl ml-2 ${
-            indicator.trend === 'up' ? 'text-green-400' : 'text-red-400'
+          className={`px-2 py-1 rounded text-sm ${
+            trend === 'up'
+              ? 'bg-green-900 text-green-200'
+              : trend === 'down'
+              ? 'bg-red-900 text-red-200'
+              : 'bg-gray-600 text-gray-300'
           }`}>
-          {indicator.trend === 'up' ? '↑' : '↓'}
+          {value}
         </span>
       </div>
-    </div>
-    <div className='mt-4 text-green-400'>
-      Latest Release: {indicator.latest_release}
-    </div>
-    <div className='text-blue-400'>Correlation: {indicator.correlation}%</div>
-    {indicator.historical_data && (
-      <div className='mt-4'>
-        <div className='text-gray-400'>Historical Data:</div>
-        {indicator.historical_data.map((data, idx) => (
-          <div key={idx} className='text-gray-400'>
-            {data.value.toFixed(2)}% ({data.date})
-          </div>
-        ))}
+      <p className='text-gray-400 text-sm mb-2'>{description}</p>
+      <div className='flex justify-between text-sm text-gray-400'>
+        <span>Importance: {importance}</span>
+        <span>Correlation: {correlation}%</span>
       </div>
-    )}
-  </div>
-);
+      {latest_release && (
+        <div className='text-xs text-gray-500 mt-2'>
+          Last updated: {latest_release}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default IndicatorCard;
