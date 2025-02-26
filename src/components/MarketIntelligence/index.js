@@ -269,15 +269,17 @@ const MarketIntelligence = () => {
   const [selectedTerm, setSelectedTerm] = useState('SWING');
   const [riskLevel, setRiskLevel] = useState('LOW');
   const [marketData, setMarketData] = useState({
+    news: {},
+    historicalPrices: {},
+    technicalIndicators: {},
+    macroIndicators: {},
     trends: {},
     lastUpdate: null,
-    historicalData: {},
-    prices: [],
   });
   const [pricesLoading, setPricesLoading] = useState(false);
   const [lastFetch, setLastFetch] = useState(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState('Intraday');
-
+  console.log('MARKET DATA: ', marketData);
   const fetchIndicators = async () => {
     try {
       setLoading(true);
@@ -293,12 +295,19 @@ const MarketIntelligence = () => {
       );
 
       if (pricesResponse.data && Array.isArray(pricesResponse.data)) {
-        setMarketData({
-          trends: {},
-          historicalData: pricesResponse.data,
+        setMarketData((prevData) => ({
+          ...prevData,
+          historicalPrices: {
+            ...prevData.historicalPrices,
+            [selectedAsset.symbol]: {
+              ...prevData.historicalPrices[selectedAsset.symbol],
+              [selectedTimeframe]: pricesResponse.data,
+            },
+          },
           lastUpdate: new Date().toISOString(),
+          // Keep prices at top level for backward compatibility
           prices: pricesResponse.data,
-        });
+        }));
       }
     } catch (err) {
       console.error('Error fetching market data:', err);
@@ -588,9 +597,15 @@ const MarketIntelligence = () => {
       <div className='mt-4 bg-gray-800 rounded-lg p-4'>
         {loading ? (
           <div className='text-center p-4'>Loading price data...</div>
-        ) : marketData?.prices?.length > 0 ? (
+        ) : marketData?.historicalPrices?.[selectedAsset.symbol]?.[
+            selectedTimeframe
+          ]?.length > 0 ? (
           <PriceChart
-            prices={marketData.prices}
+            prices={
+              marketData.historicalPrices[selectedAsset.symbol][
+                selectedTimeframe
+              ]
+            }
             timeframe={selectedTimeframe}
           />
         ) : (
