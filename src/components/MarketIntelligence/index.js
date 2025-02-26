@@ -276,8 +276,8 @@ const MarketIntelligence = () => {
     trends: {},
     lastUpdate: null,
   });
-  const [pricesLoading, setPricesLoading] = useState(false);
-  const [lastFetch, setLastFetch] = useState(null);
+  // const [pricesLoading, setPricesLoading] = useState(false);
+  // const [lastFetch, setLastFetch] = useState(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState('Intraday');
   console.log('MARKET DATA: ', marketData);
   const fetchIndicators = async () => {
@@ -958,6 +958,10 @@ const MarketIntelligence = () => {
                   newsTimestamp: new Date().toISOString(),
                 }));
                 setAnalysisStatus('');
+                setMarketData((prev) => ({
+                  ...prev,
+                  news: response.data.data,
+                }));
               } else {
                 setAnalysisStatus(
                   response.data.message || 'Failed to fetch news'
