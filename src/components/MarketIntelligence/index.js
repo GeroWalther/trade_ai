@@ -276,17 +276,21 @@ const MarketIntelligence = () => {
   });
   const [pricesLoading, setPricesLoading] = useState(false);
   const [lastFetch, setLastFetch] = useState(null);
+  const [selectedTimeframe, setSelectedTimeframe] = useState('Intraday');
 
   const fetchIndicators = async () => {
     try {
       setLoading(true);
-      console.log('Fetching data for', selectedAsset.symbol);
-
-      // Make the actual request for historical prices
-      const pricesResponse = await axios.get(
-        `${config.api.baseUrl}/api/historical-prices/${selectedAsset.symbol}`
+      console.log(
+        'Fetching data for',
+        selectedAsset.symbol,
+        'with timeframe',
+        selectedTimeframe
       );
-      console.log('Got price response:', pricesResponse.data);
+
+      const pricesResponse = await axios.get(
+        `${config.api.baseUrl}/api/historical-prices/${selectedAsset.symbol}?timeframe=${selectedTimeframe}`
+      );
 
       if (pricesResponse.data && Array.isArray(pricesResponse.data)) {
         setMarketData({
@@ -295,8 +299,6 @@ const MarketIntelligence = () => {
           lastUpdate: new Date().toISOString(),
           prices: pricesResponse.data,
         });
-      } else {
-        console.error('Invalid price data format:', pricesResponse.data);
       }
     } catch (err) {
       console.error('Error fetching market data:', err);
@@ -305,11 +307,10 @@ const MarketIntelligence = () => {
     }
   };
 
-  // Make sure we fetch when asset changes
+  // Fetch when asset or timeframe changes
   useEffect(() => {
-    console.log('Asset changed, fetching data for:', selectedAsset.symbol);
     fetchIndicators();
-  }, [selectedAsset.symbol]);
+  }, [selectedAsset.symbol, selectedTimeframe]);
 
   // Add this to check the data flow
   useEffect(() => {
@@ -547,16 +548,51 @@ const MarketIntelligence = () => {
 
   const groupedIndicators = groupIndicatorsByCategory(indicators);
 
+  const handleTimeframeChange = (event) => {
+    console.log('Timeframe changed to:', event.target.value);
+    setSelectedTimeframe(event.target.value);
+  };
+
   return (
     <div className='market-intelligence p-4'>
       <h2 className='text-2xl font-bold mb-6'>Market Intelligence</h2>
+
+      {/* Asset and Timeframe Selection */}
+      <div className='flex gap-4 mb-4'>
+        <select
+          value={selectedAsset.symbol}
+          onChange={(e) => setSelectedAsset({ symbol: e.target.value })}
+          className='bg-gray-700 text-white px-4 py-2 rounded'>
+          {Object.entries(availableAssets).map(([category, assets]) => (
+            <optgroup key={category} label={category}>
+              {assets.map((asset) => (
+                <option key={asset.symbol} value={asset.symbol}>
+                  {asset.name}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+
+        <select
+          value={selectedTimeframe}
+          onChange={handleTimeframeChange}
+          className='bg-gray-700 text-white px-4 py-2 rounded'>
+          <option value='Intraday'>Intraday (1-8h)</option>
+          <option value='Swing'>Swing (2-5 days)</option>
+          <option value='Position'>Position (1-4 weeks)</option>
+        </select>
+      </div>
 
       {/* Price Chart */}
       <div className='mt-4 bg-gray-800 rounded-lg p-4'>
         {loading ? (
           <div className='text-center p-4'>Loading price data...</div>
         ) : marketData?.prices?.length > 0 ? (
-          <PriceChart prices={marketData.prices} />
+          <PriceChart
+            prices={marketData.prices}
+            timeframe={selectedTimeframe}
+          />
         ) : (
           <div className='text-center text-gray-500 p-4'>
             No price data available
@@ -566,49 +602,28 @@ const MarketIntelligence = () => {
 
       {/* Controls Row */}
       <div className='bg-gray-800 p-4 rounded-lg flex items-center gap-4'>
-        {/* Asset Selector */}
-        <select
-          value={`${selectedAsset.category}|${selectedAsset.symbol}`}
-          onChange={(e) => {
-            const [category, symbol] = e.target.value.split('|');
-            const newAsset = availableAssets[category].find(
-              (asset) => asset.symbol === symbol
-            );
-            handleAssetChange(newAsset);
-          }}
-          className='bg-gray-700 text-white px-4 py-2 rounded border border-gray-600'>
-          {Object.entries(availableAssets).map(([category, assets]) => (
-            <optgroup key={category} label={category}>
-              {assets.map((asset) => (
-                <option
-                  key={asset.symbol}
-                  value={`${category}|${asset.symbol}`}>
-                  {asset.name}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-
         {/* Term Selector */}
-        <select
+        {/* <select
           value={selectedTerm}
           onChange={(e) => setSelectedTerm(e.target.value)}
           className='bg-gray-700 text-white px-4 py-2 rounded border border-gray-600'>
           <option value='INTRADAY'>Intraday (1-4h)</option>
           <option value='SWING'>Swing (2-5 days)</option>
           <option value='POSITION'>Position (1-4 weeks)</option>
-        </select>
+        </select> */}
 
         {/* Risk Level Selector */}
-        <select
-          value={riskLevel}
-          onChange={(e) => setRiskLevel(e.target.value)}
-          className='bg-gray-700 text-white px-4 py-2 rounded border border-gray-600'>
-          <option value='LOW'>Conservative</option>
-          <option value='MEDIUM'>Moderate</option>
-          <option value='HIGH'>Aggressive</option>
-        </select>
+        <div className='flex items-center gap-2'>
+          <p className='text-white'>Risk Level</p>
+          <select
+            value={riskLevel}
+            onChange={(e) => setRiskLevel(e.target.value)}
+            className='bg-gray-700 text-white px-4 py-2 rounded border border-gray-600'>
+            <option value='LOW'>Conservative</option>
+            <option value='MEDIUM'>Moderate</option>
+            <option value='HIGH'>Aggressive</option>
+          </select>
+        </div>
 
         {/* Action Buttons */}
         <div className='flex gap-2 ml-auto'>
