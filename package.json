@@ -44,6 +44,7 @@
   "license": "MIT",
   "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447",
   "dependencies": {
+    "@electron/remote": "^2.1.2",
     "@heroicons/react": "^2.2.0",
     "@types/axios": "^0.14.4",
     "axios": "^1.7.9",
