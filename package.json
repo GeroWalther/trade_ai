@@ -51,6 +51,7 @@
     "crypto-browserify": "^3.12.1",
     "electron-squirrel-startup": "^1.0.1",
     "events": "^3.3.0",
+    "recharts": "^2.15.1",
     "socket.io-client": "^4.7.2",
     "stream-browserify": "^3.0.0",
     "util": "^0.12.5"

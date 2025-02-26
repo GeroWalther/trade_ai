@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import TradingViewChart from './TradingViewChart';
 import { config } from '../../config';
 import axios from 'axios';
 import analysisService from '../../services/analysis_service';
 import { shell } from 'electron';
 import IndicatorCard from './IndicatorCard.jsx';
+import PriceChart from './PriceChart';
+import { cacheService } from '../../services/cache_service';
 
+// Define available assets with categories
 const availableAssets = {
   Forex: [
     {
@@ -50,33 +53,21 @@ const availableAssets = {
       category: 'Forex',
       type: 'Forex',
     },
+  ],
+  Crypto: [
     {
-      symbol: 'NZD_USD',
-      name: 'NZD/USD',
-      tradingViewSymbol: 'FX:NZDUSD',
-      category: 'Forex',
-      type: 'Forex',
+      symbol: 'BTC_USD',
+      name: 'BTC/USD',
+      tradingViewSymbol: 'BTCUSD',
+      category: 'Crypto',
+      type: 'Crypto',
     },
     {
-      symbol: 'EUR_GBP',
-      name: 'EUR/GBP',
-      tradingViewSymbol: 'FX:EURGBP',
-      category: 'Forex',
-      type: 'Forex',
-    },
-    {
-      symbol: 'EUR_JPY',
-      name: 'EUR/JPY',
-      tradingViewSymbol: 'FX:EURJPY',
-      category: 'Forex',
-      type: 'Forex',
-    },
-    {
-      symbol: 'GBP_JPY',
-      name: 'GBP/JPY',
-      tradingViewSymbol: 'FX:GBPJPY',
-      category: 'Forex',
-      type: 'Forex',
+      symbol: 'ETH_USD',
+      name: 'ETH/USD',
+      tradingViewSymbol: 'ETHUSD',
+      category: 'Crypto',
+      type: 'Crypto',
     },
   ],
   Commodities: [
@@ -125,7 +116,7 @@ const availableAssets = {
       type: 'Index',
     },
     {
-      symbol: 'DE30_EUR',
+      symbol: 'DE40_EUR',
       name: 'DAX 40',
       tradingViewSymbol: 'DAX',
       category: 'Indices',
@@ -270,6 +261,7 @@ const MarketIntelligence = () => {
     symbol: 'EUR_USD',
     name: 'EUR/USD',
     category: 'Forex',
+    type: 'Forex',
   });
   const [indicators, setIndicators] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -280,53 +272,51 @@ const MarketIntelligence = () => {
     trends: {},
     lastUpdate: null,
     historicalData: {},
+    prices: [],
   });
+  const [pricesLoading, setPricesLoading] = useState(false);
+  const [lastFetch, setLastFetch] = useState(null);
 
   const fetchIndicators = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `${config.api.baseUrl}/api/economic-indicators`
+      console.log('Fetching data for', selectedAsset.symbol);
+
+      // Make the actual request for historical prices
+      const pricesResponse = await axios.get(
+        `${config.api.baseUrl}/api/historical-prices/${selectedAsset.symbol}`
       );
+      console.log('Got price response:', pricesResponse.data);
 
-      // Process and store market data
-      const trends = {};
-      const historical = {};
-
-      Object.entries(response.data).forEach(([key, indicator]) => {
-        trends[key] = indicator.trend;
-        historical[key] = indicator.historical_data;
-
-        // Log changes to console
-        if (indicator.historical_data && indicator.historical_data.length > 1) {
-          const current = parseFloat(indicator.value);
-          const previous = parseFloat(indicator.historical_data[1].value);
-          const change = (((current - previous) / previous) * 100).toFixed(2);
-          console.log(
-            `${indicator.name}: ${indicator.trend.toUpperCase()} (${change}%)`
-          );
-        }
-      });
-
-      setMarketData({
-        trends,
-        historicalData: historical,
-        lastUpdate: new Date().toISOString(),
-      });
-
-      setIndicators(response.data);
-      setError(null);
+      if (pricesResponse.data && Array.isArray(pricesResponse.data)) {
+        setMarketData({
+          trends: {},
+          historicalData: pricesResponse.data,
+          lastUpdate: new Date().toISOString(),
+          prices: pricesResponse.data,
+        });
+      } else {
+        console.error('Invalid price data format:', pricesResponse.data);
+      }
     } catch (err) {
-      console.error('Error fetching indicators:', err);
-      setError(err.message);
+      console.error('Error fetching market data:', err);
     } finally {
       setLoading(false);
     }
   };
 
+  // Make sure we fetch when asset changes
   useEffect(() => {
+    console.log('Asset changed, fetching data for:', selectedAsset.symbol);
     fetchIndicators();
-  }, []);
+  }, [selectedAsset.symbol]);
+
+  // Add this to check the data flow
+  useEffect(() => {
+    if (marketData?.prices) {
+      console.log('Current prices:', marketData.prices);
+    }
+  }, [marketData]);
 
   const handleClearCache = async () => {
     try {
@@ -422,31 +412,35 @@ const MarketIntelligence = () => {
     }
   }, [analysis, selectedAsset.symbol, selectedTerm, riskLevel]);
 
-  const handleAssetChange = (e) => {
-    const [category, symbol] = e.target.value.split('|');
-    const newAsset = availableAssets[category].find(
-      (asset) => asset.symbol === symbol
-    );
-    setSelectedAsset(newAsset);
+  const handleAssetChange = async (asset) => {
+    console.log('Asset selection changed to:', asset.symbol); // Debug log
+    try {
+      setSelectedAsset(asset);
+      setLoading(true);
 
-    // Check if we have recent analysis for this asset
-    const savedAnalysis = localStorage.getItem('marketAnalysis');
-    if (savedAnalysis) {
-      const parsed = JSON.parse(savedAnalysis);
-      if (
-        parsed.asset === symbol &&
-        parsed.term === selectedTerm &&
-        parsed.risk === riskLevel &&
-        Date.now() - parsed.timestamp < 3600000 // Less than 1 hour old
-      ) {
-        setAnalysis(parsed.data);
-      } else {
-        setAnalysis(null);
+      const cacheKey = `indicators_${asset.symbol}`;
+      const cachedData = cacheService.get(cacheKey);
+
+      if (cachedData) {
+        setMarketData(cachedData.marketData);
+        setIndicators(cachedData.indicators);
+        setLoading(false);
+        return;
       }
-    } else {
-      setAnalysis(null);
+
+      await fetchIndicators();
+    } catch (err) {
+      console.error('Error fetching market data:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
+
+  // Initial load
+  useEffect(() => {
+    handleAssetChange(selectedAsset);
+  }, []); // Only run on mount
 
   const handleAnalyze = async () => {
     setLoading(true);
@@ -554,111 +548,120 @@ const MarketIntelligence = () => {
   const groupedIndicators = groupIndicatorsByCategory(indicators);
 
   return (
-    <div className='p-4 space-y-6 bg-gray-900'>
-      {/* Asset Selector and Controls */}
-      <div className='grid grid-cols-1 gap-6'>
-        <div className='bg-gray-800 p-4 rounded-lg flex justify-between items-center'>
-          <div className='flex gap-4 items-center'>
-            <select
-              value={`${selectedAsset.category}|${selectedAsset.symbol}`}
-              onChange={handleAssetChange}
-              className='bg-gray-700 text-white px-4 py-2 rounded border border-gray-600'>
-              {Object.entries(availableAssets).map(([category, assets]) => (
-                <optgroup key={category} label={category}>
-                  {assets.map((asset) => (
-                    <option
-                      key={asset.symbol}
-                      value={`${category}|${asset.symbol}`}>
-                      {asset.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+    <div className='market-intelligence p-4'>
+      <h2 className='text-2xl font-bold mb-6'>Market Intelligence</h2>
 
-            <select
-              value={selectedTerm}
-              onChange={(e) => setSelectedTerm(e.target.value)}
-              className='bg-gray-700 text-white px-4 py-2 rounded border border-gray-600'>
-              {Object.entries(TRADING_TERMS).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={riskLevel}
-              onChange={(e) => setRiskLevel(e.target.value)}
-              className='bg-gray-700 text-white px-4 py-2 rounded border border-gray-600'>
-              {Object.entries(RISK_LEVELS).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className='flex items-center gap-4'>
-            <button
-              onClick={handleAnalyze}
-              disabled={loading}
-              className='bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors'>
-              {loading ? 'Analyzing...' : 'AI Analysis'}
-            </button>
-            <button
-              onClick={handleClearCache}
-              className='text-gray-400 hover:text-gray-300 text-sm'>
-              Clear Cache
-            </button>
-            {analysisStatus && (
-              <span className='text-gray-400 text-sm'>{analysisStatus}</span>
-            )}
-          </div>
-        </div>
-
-        {/* Display Asset-Specific Indicators first */}
+      {/* Price Chart */}
+      <div className='mt-4 bg-gray-800 rounded-lg p-4'>
         {loading ? (
-          <div className='mt-6 bg-gray-800 rounded-lg p-6'>
-            <div className='animate-pulse text-blue-300'>
-              Loading indicators...
-            </div>
-          </div>
-        ) : hasValidAssetIndicators ? (
-          <div className='mt-6 bg-gray-800 rounded-lg p-6'>
-            <h3 className='text-xl font-bold text-blue-100 mb-4'>
-              {selectedAsset.name} Specific Indicators
-            </h3>
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-              {Object.entries(assetIndicators).map(([key, indicator]) => (
-                <IndicatorCard key={key} indicator={indicator} />
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {/* Display Core Indicators below */}
-        {!loading && hasValidCoreIndicators && (
-          <div className='mt-6 bg-gray-800 rounded-lg p-6'>
-            <h3 className='text-xl font-bold text-blue-100 mb-4'>
-              Macro Economic Indicators
-            </h3>
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-              {Object.entries(coreIndicators).map(([key, indicator]) => (
-                <IndicatorCard
-                  key={key}
-                  indicator={indicator}
-                  trend={marketData.trends[key]}
-                />
-              ))}
-            </div>
+          <div className='text-center p-4'>Loading price data...</div>
+        ) : marketData?.prices?.length > 0 ? (
+          <PriceChart prices={marketData.prices} />
+        ) : (
+          <div className='text-center text-gray-500 p-4'>
+            No price data available
           </div>
         )}
-
-        {/* <div className='w-full h-[800px] bg-gray-800 rounded-lg p-4'>
-          <TradingViewChart symbol={selectedAsset.tradingViewSymbol} 
-        </div>/> */}
       </div>
+
+      {/* Controls Row */}
+      <div className='bg-gray-800 p-4 rounded-lg flex items-center gap-4'>
+        {/* Asset Selector */}
+        <select
+          value={`${selectedAsset.category}|${selectedAsset.symbol}`}
+          onChange={(e) => {
+            const [category, symbol] = e.target.value.split('|');
+            const newAsset = availableAssets[category].find(
+              (asset) => asset.symbol === symbol
+            );
+            handleAssetChange(newAsset);
+          }}
+          className='bg-gray-700 text-white px-4 py-2 rounded border border-gray-600'>
+          {Object.entries(availableAssets).map(([category, assets]) => (
+            <optgroup key={category} label={category}>
+              {assets.map((asset) => (
+                <option
+                  key={asset.symbol}
+                  value={`${category}|${asset.symbol}`}>
+                  {asset.name}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+
+        {/* Term Selector */}
+        <select
+          value={selectedTerm}
+          onChange={(e) => setSelectedTerm(e.target.value)}
+          className='bg-gray-700 text-white px-4 py-2 rounded border border-gray-600'>
+          <option value='INTRADAY'>Intraday (1-4h)</option>
+          <option value='SWING'>Swing (2-5 days)</option>
+          <option value='POSITION'>Position (1-4 weeks)</option>
+        </select>
+
+        {/* Risk Level Selector */}
+        <select
+          value={riskLevel}
+          onChange={(e) => setRiskLevel(e.target.value)}
+          className='bg-gray-700 text-white px-4 py-2 rounded border border-gray-600'>
+          <option value='LOW'>Conservative</option>
+          <option value='MEDIUM'>Moderate</option>
+          <option value='HIGH'>Aggressive</option>
+        </select>
+
+        {/* Action Buttons */}
+        <div className='flex gap-2 ml-auto'>
+          <button
+            onClick={handleAnalyze}
+            className='bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded'>
+            AI Analysis
+          </button>
+          <button
+            onClick={handleClearCache}
+            className='bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded'>
+            Clear Cache
+          </button>
+        </div>
+      </div>
+
+      {/* Display Asset-Specific Indicators first */}
+      {loading ? (
+        <div className='mt-6 bg-gray-800 rounded-lg p-6'>
+          <div className='animate-pulse text-blue-300'>
+            Loading indicators...
+          </div>
+        </div>
+      ) : hasValidAssetIndicators ? (
+        <div className='mt-6 bg-gray-800 rounded-lg p-6'>
+          <h3 className='text-xl font-bold text-blue-100 mb-4'>
+            {selectedAsset.name} Specific Indicators
+          </h3>
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+            {Object.entries(assetIndicators).map(([key, indicator]) => (
+              <IndicatorCard key={key} indicator={indicator} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Display Core Indicators below */}
+      {!loading && hasValidCoreIndicators && (
+        <div className='mt-6 bg-gray-800 rounded-lg p-6'>
+          <h3 className='text-xl font-bold text-blue-100 mb-4'>
+            Macro Economic Indicators
+          </h3>
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+            {Object.entries(coreIndicators).map(([key, indicator]) => (
+              <IndicatorCard
+                key={key}
+                indicator={indicator}
+                trend={marketData.trends[key]}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Only render macro analysis if it exists */}
       {analysis?.macro && (

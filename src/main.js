@@ -1,6 +1,7 @@
 import { app, BrowserWindow, session } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
+require('@electron/remote/main').initialize();
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -20,8 +21,11 @@ const createWindow = () => {
       contextIsolation: false,
       webSecurity: false,
       allowRunningInsecureContent: true,
+      enableRemoteModule: true,
     },
   });
+
+  require('@electron/remote/main').enable(mainWindow.webContents);
 
   // Disable all security restrictions
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
