@@ -273,7 +273,6 @@ const MarketIntelligence = () => {
     historicalPrices: {},
     technicalIndicators: {},
     macroIndicators: {},
-    trends: {},
     lastUpdate: null,
   });
   // const [pricesLoading, setPricesLoading] = useState(false);
@@ -305,8 +304,6 @@ const MarketIntelligence = () => {
             },
           },
           lastUpdate: new Date().toISOString(),
-          // Keep prices at top level for backward compatibility
-          prices: pricesResponse.data,
         }));
       }
     } catch (err) {
@@ -331,24 +328,24 @@ const MarketIntelligence = () => {
   };
 
   // Map trading asset categories to FRED categories
-  const getFredCategory = (assetCategory, assetType) => {
-    switch (assetCategory.toLowerCase()) {
-      case 'forex':
-        return 'forex';
-      case 'commodities':
-        if (assetType === 'Gold' || assetType === 'Silver') {
-          return 'precious_metals';
-        }
-        if (assetType === 'Oil') {
-          return 'oil';
-        }
-        return 'commodities';
-      case 'indices':
-        return 'stocks';
-      default:
-        return assetCategory.toLowerCase();
-    }
-  };
+  // const getFredCategory = (assetCategory, assetType) => {
+  //   switch (assetCategory.toLowerCase()) {
+  //     case 'forex':
+  //       return 'forex';
+  //     case 'commodities':
+  //       if (assetType === 'Gold' || assetType === 'Silver') {
+  //         return 'precious_metals';
+  //       }
+  //       if (assetType === 'Oil') {
+  //         return 'oil';
+  //       }
+  //       return 'commodities';
+  //     case 'indices':
+  //       return 'stocks';
+  //     default:
+  //       return assetCategory.toLowerCase();
+  //   }
+  // };
 
   // Filter indicators based on category
   const coreIndicators = indicators
@@ -357,22 +354,22 @@ const MarketIntelligence = () => {
         .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
     : null;
 
-  const assetIndicators = indicators
-    ? Object.entries(indicators)
-        .filter(
-          ([key, value]) =>
-            value !== null &&
-            value.category ===
-              getFredCategory(selectedAsset.category, selectedAsset.type)
-        )
-        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
-    : null;
+  // const assetIndicators = indicators
+  //   ? Object.entries(indicators)
+  //       .filter(
+  //         ([key, value]) =>
+  //           value !== null &&
+  //           value.category ===
+  //             getFredCategory(selectedAsset.category, selectedAsset.type)
+  //       )
+  //       .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
+  //   : null;
 
   // Add check before rendering
-  const hasValidCoreIndicators =
-    coreIndicators && Object.keys(coreIndicators).length > 0;
-  const hasValidAssetIndicators =
-    assetIndicators && Object.keys(assetIndicators).length > 0;
+  // const hasValidCoreIndicators =
+  //   coreIndicators && Object.keys(coreIndicators).length > 0;
+  // const hasValidAssetIndicators =
+  //   assetIndicators && Object.keys(assetIndicators).length > 0;
 
   const [analysisStatus, setAnalysisStatus] = useState('');
   const [analysis, setAnalysis] = useState(null);
@@ -400,20 +397,20 @@ const MarketIntelligence = () => {
   }, [selectedAsset.symbol, selectedTerm, riskLevel]);
 
   // Save analysis to localStorage whenever it changes
-  useEffect(() => {
-    if (analysis) {
-      localStorage.setItem(
-        'marketAnalysis',
-        JSON.stringify({
-          data: analysis,
-          timestamp: Date.now(),
-          asset: selectedAsset.symbol,
-          term: selectedTerm,
-          risk: riskLevel,
-        })
-      );
-    }
-  }, [analysis, selectedAsset.symbol, selectedTerm, riskLevel]);
+  // useEffect(() => {
+  //   if (analysis) {
+  //     localStorage.setItem(
+  //       'marketAnalysis',
+  //       JSON.stringify({
+  //         data: analysis,
+  //         timestamp: Date.now(),
+  //         asset: selectedAsset.symbol,
+  //         term: selectedTerm,
+  //         risk: riskLevel,
+  //       })
+  //     );
+  //   }
+  // }, [analysis, selectedAsset.symbol, selectedTerm, riskLevel]);
 
   const handleAssetChange = async (asset) => {
     console.log('Asset selection changed to:', asset.symbol); // Debug log
@@ -555,7 +552,38 @@ const MarketIntelligence = () => {
     setSelectedTimeframe(event.target.value);
   };
 
-  // Test Indicators button handler
+  // Add this function to fetch macro indicators
+  const fetchMacroIndicators = async () => {
+    try {
+      const response = await axios.get(
+        `${config.api.baseUrl}/api/economic-indicators`
+      );
+      console.log('Macro Indicators Response:', response.data); // Add this debug log
+      if (response.data) {
+        // Set the macro indicators in state
+        setIndicators(response.data);
+
+        // Update marketData with macro indicators
+        setMarketData((prev) => ({
+          ...prev,
+          macroIndicators: {
+            ...prev.macroIndicators,
+            ...response.data,
+          },
+        }));
+      }
+    } catch (err) {
+      console.error('Error fetching macro indicators:', err);
+      setError('Failed to load economic indicators');
+    }
+  };
+
+  // Add useEffect to load macro indicators on mount
+  useEffect(() => {
+    fetchMacroIndicators();
+  }, []); // Empty dependency array means this runs once on mount
+
+  // Keep handleTestIndicators focused only on technical indicators
   const handleTestIndicators = async () => {
     try {
       setLoading(true);
@@ -564,10 +592,8 @@ const MarketIntelligence = () => {
       const response = await axios.get(
         `${config.api.baseUrl}/api/test-indicators/${symbol}`
       );
-      // console.log('Raw Technical Indicators Response:', response.data);
 
       if (response.data.status === 'success' && response.data.data) {
-        // Extract and validate the indicator data
         const rawData = response.data.data;
         console.log('!!!!! Raw Technical Data:', rawData);
 
@@ -610,9 +636,6 @@ const MarketIntelligence = () => {
         }));
 
         setAnalysisStatus('');
-      } else {
-        console.error('Invalid response format:', response.data);
-        setAnalysisStatus('Invalid response from server');
       }
     } catch (error) {
       console.error('Test error:', error);
@@ -770,239 +793,175 @@ const MarketIntelligence = () => {
             Loading indicators...
           </div>
         </div>
-      ) : hasValidAssetIndicators ? (
-        <div className='mt-6 bg-gray-800 rounded-lg p-6'>
-          <h3 className='text-xl font-bold text-blue-100 mb-4'>
-            {selectedAsset.name} Specific Indicators
-          </h3>
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-            {Object.entries(assetIndicators).map(([key, indicator]) => (
-              <IndicatorCard key={key} indicator={indicator} />
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {/* Display Core Indicators below */}
-      {!loading && hasValidCoreIndicators && (
-        <div className='mt-6 bg-gray-800 rounded-lg p-6'>
-          <h3 className='text-xl font-bold text-blue-100 mb-4'>
-            Macro Economic Indicators
-          </h3>
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-            {Object.entries(coreIndicators).map(([key, indicator]) => (
-              <IndicatorCard
-                key={key}
-                indicator={indicator}
-                trend={marketData.trends[key]}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Only render macro analysis if it exists */}
-      {analysis?.macro && (
-        <div className='space-y-6'>
-          <div className='bg-gray-800 p-6 rounded-lg'>
-            <div className='space-y-6'>
-              <div>
-                <h4 className='text-lg font-medium text-blue-200 mb-2'>
-                  Market Summary
-                </h4>
-                <p className='text-gray-300'>
-                  {analysis.macro.aiAnalysis?.summary || 'No summary available'}
-                </p>
-              </div>
-
-              <div>
-                <h4 className='text-lg font-medium text-blue-200 mb-2'>
-                  Trading Strategy
-                </h4>
-                <div className='text-gray-300 space-y-2'>
-                  <p>
-                    <span className='font-medium'>Direction: </span>
-                    {analysis.macro.aiAnalysis?.recommendedStrategy
-                      ?.direction || 'NEUTRAL'}
-                  </p>
-                  <p>
-                    <span className='font-medium'>Entry: </span>
-                    {analysis.macro.aiAnalysis?.recommendedStrategy?.entry
-                      ?.price || 'N/A'}
-                    <span className='text-gray-400 ml-2'>
-                      (
-                      {analysis.macro.aiAnalysis?.recommendedStrategy?.entry
-                        ?.rationale || 'No rationale available'}
-                      )
-                    </span>
-                  </p>
-                  <p>
-                    <span className='font-medium'>Stop Loss: </span>
-                    {analysis.macro.aiAnalysis?.recommendedStrategy?.stopLoss
-                      ?.price || 'N/A'}
-                    <span className='text-gray-400 ml-2'>
-                      (
-                      {analysis.macro.aiAnalysis?.recommendedStrategy?.stopLoss
-                        ?.rationale || 'No rationale available'}
-                      )
-                    </span>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* News section */}
-          {analysis.news && analysis.news.length > 0 && (
-            <div className='bg-gray-800 p-6 rounded-lg'>
+      ) : (
+        <>
+          {/* Technical Indicators Section */}
+          {analysis?.technical_indicators && (
+            <div className='bg-gray-800 p-6 rounded-lg mt-6'>
               <h3 className='text-xl font-semibold text-blue-100 mb-4'>
-                Latest News
+                Technical Analysis
               </h3>
-              <div className='space-y-4'>
-                {analysis.news.map((item, idx) => (
-                  <div key={idx} className='bg-gray-700 p-4 rounded-lg'>
-                    <h4 className='font-medium text-blue-100 mb-2'>
-                      {item.title}
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='bg-gray-700 p-4 rounded'>
+                  <div className='flex justify-between items-center mb-2'>
+                    <h4 className='text-lg font-medium text-blue-200'>
+                      Daily EMA 50
                     </h4>
-                    <p className='text-sm text-gray-400'>{item.summary}</p>
+                    <span
+                      className={getEMAColor(
+                        getEMASignal(
+                          analysis.technical_indicators.EMA50?.value,
+                          analysis.technical_indicators.EMA50?.current_price
+                        )
+                      )}>
+                      {getEMASignal(
+                        analysis.technical_indicators.EMA50?.value,
+                        analysis.technical_indicators.EMA50?.current_price
+                      )}
+                    </span>
                   </div>
-                ))}
+                  <div className='text-2xl text-white'>
+                    {formatPrice(
+                      analysis.technical_indicators.EMA50?.value,
+                      selectedAsset.type
+                    )}
+                  </div>
+                  <div className='text-sm text-gray-400'>
+                    Current:{' '}
+                    {formatPrice(
+                      analysis.technical_indicators.EMA50?.current_price,
+                      selectedAsset.type
+                    )}
+                  </div>
+                </div>
+
+                <div className='bg-gray-700 p-4 rounded'>
+                  <div className='flex justify-between items-center mb-2'>
+                    <h4 className='text-lg font-medium text-blue-200'>MACD</h4>
+                    <span className='text-sm text-gray-400'>
+                      {analysis.technical_indicators.MACD?.value?.toFixed(4) ||
+                        'N/A'}
+                    </span>
+                  </div>
+                  <div
+                    className={`text-2xl ${getMACDColor(
+                      analysis.technical_indicators.MACD?.trend
+                    )}`}>
+                    {analysis.technical_indicators.MACD?.trend || 'NEUTRAL'}
+                  </div>
+                </div>
+
+                <div className='bg-gray-700 p-4 rounded'>
+                  <div className='flex justify-between items-center mb-2'>
+                    <h4 className='text-lg font-medium text-blue-200'>
+                      RSI (14)
+                    </h4>
+                    <span className='text-sm text-gray-400'>
+                      {analysis.technical_indicators.RSI?.strength || 50}
+                    </span>
+                  </div>
+                  <div className='text-2xl text-white'>
+                    {analysis.technical_indicators.RSI?.value?.toFixed(2) ||
+                      'N/A'}
+                  </div>
+                  <div
+                    className={`text-lg ${getRSIColor(
+                      analysis.technical_indicators.RSI?.signal
+                    )}`}>
+                    {analysis.technical_indicators.RSI?.signal || 'NEUTRAL'}
+                  </div>
+                </div>
+
+                <div className='bg-gray-700 p-4 rounded'>
+                  <div className='flex justify-between items-center mb-2'>
+                    <h4 className='text-lg font-medium text-blue-200'>
+                      ATR (14)
+                    </h4>
+                    <span className='text-sm text-gray-400'>
+                      {analysis.technical_indicators.ATR?.value?.toFixed(4) ||
+                        'N/A'}
+                    </span>
+                  </div>
+                  <div
+                    className={`text-2xl ${getATRColor(
+                      analysis.technical_indicators.ATR?.status
+                    )}`}>
+                    {analysis.technical_indicators.ATR?.status ||
+                      'NORMAL RANGE'}
+                  </div>
+                </div>
+
+                <div className='col-span-2 bg-gray-700 p-4 rounded'>
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div>
+                      <h4 className='text-lg font-medium text-blue-200 mb-2'>
+                        Resistance
+                      </h4>
+                      <div className='space-y-2'>
+                        {analysis.technical_indicators.levels?.resistance?.map(
+                          (level, i) => (
+                            <div key={i} className='flex justify-between'>
+                              <span className='text-red-400'>R{i + 1}</span>
+                              <span className='text-red-400'>
+                                {formatPrice(level, selectedAsset.type)}
+                              </span>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className='text-lg font-medium text-blue-200 mb-2'>
+                        Support
+                      </h4>
+                      <div className='space-y-2'>
+                        {analysis.technical_indicators.levels?.support?.map(
+                          (level, i) => (
+                            <div key={i} className='flex justify-between'>
+                              <span className='text-green-400'>S{i + 1}</span>
+                              <span className='text-green-400'>
+                                {formatPrice(level, selectedAsset.type)}
+                              </span>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
-        </div>
-      )}
 
-      {/* Technical Analysis Display */}
-      {analysis?.technical_indicators && (
-        <div className='bg-gray-800 p-6 rounded-lg'>
-          <h3 className='text-xl font-semibold text-blue-100 mb-4'>
-            Technical Analysis
-          </h3>
-          <div className='grid grid-cols-2 gap-4'>
-            <div className='bg-gray-700 p-4 rounded'>
-              <div className='flex justify-between items-center mb-2'>
-                <h4 className='text-lg font-medium text-blue-200'>
-                  Daily EMA 50
-                </h4>
-                <span
-                  className={getEMAColor(
-                    getEMASignal(
-                      analysis.technical_indicators.EMA50?.value,
-                      analysis.technical_indicators.EMA50?.current_price
-                    )
-                  )}>
-                  {getEMASignal(
-                    analysis.technical_indicators.EMA50?.value,
-                    analysis.technical_indicators.EMA50?.current_price
-                  )}
-                </span>
-              </div>
-              <div className='text-2xl text-white'>
-                {formatPrice(
-                  analysis.technical_indicators.EMA50?.value,
-                  selectedAsset.type
-                )}
-              </div>
-              <div className='text-sm text-gray-400'>
-                Current:{' '}
-                {formatPrice(
-                  analysis.technical_indicators.EMA50?.current_price,
-                  selectedAsset.type
-                )}
-              </div>
-            </div>
-
-            <div className='bg-gray-700 p-4 rounded'>
-              <div className='flex justify-between items-center mb-2'>
-                <h4 className='text-lg font-medium text-blue-200'>MACD</h4>
-                <span className='text-sm text-gray-400'>
-                  {analysis.technical_indicators.MACD?.value?.toFixed(4) ||
-                    'N/A'}
-                </span>
-              </div>
-              <div
-                className={`text-2xl ${getMACDColor(
-                  analysis.technical_indicators.MACD?.trend
-                )}`}>
-                {analysis.technical_indicators.MACD?.trend || 'NEUTRAL'}
-              </div>
-            </div>
-
-            <div className='bg-gray-700 p-4 rounded'>
-              <div className='flex justify-between items-center mb-2'>
-                <h4 className='text-lg font-medium text-blue-200'>RSI (14)</h4>
-                <span className='text-sm text-gray-400'>
-                  {analysis.technical_indicators.RSI?.strength || 50}
-                </span>
-              </div>
-              <div className='text-2xl text-white'>
-                {analysis.technical_indicators.RSI?.value?.toFixed(2) || 'N/A'}
-              </div>
-              <div
-                className={`text-lg ${getRSIColor(
-                  analysis.technical_indicators.RSI?.signal
-                )}`}>
-                {analysis.technical_indicators.RSI?.signal || 'NEUTRAL'}
-              </div>
-            </div>
-
-            <div className='bg-gray-700 p-4 rounded'>
-              <div className='flex justify-between items-center mb-2'>
-                <h4 className='text-lg font-medium text-blue-200'>ATR (14)</h4>
-                <span className='text-sm text-gray-400'>
-                  {analysis.technical_indicators.ATR?.value?.toFixed(4) ||
-                    'N/A'}
-                </span>
-              </div>
-              <div
-                className={`text-2xl ${getATRColor(
-                  analysis.technical_indicators.ATR?.status
-                )}`}>
-                {analysis.technical_indicators.ATR?.status || 'NORMAL RANGE'}
-              </div>
-            </div>
-
-            <div className='col-span-2 bg-gray-700 p-4 rounded'>
-              <div className='grid grid-cols-2 gap-4'>
-                <div>
-                  <h4 className='text-lg font-medium text-blue-200 mb-2'>
-                    Resistance
-                  </h4>
-                  <div className='space-y-2'>
-                    {analysis.technical_indicators.levels?.resistance?.map(
-                      (level, i) => (
-                        <div key={i} className='flex justify-between'>
-                          <span className='text-red-400'>R{i + 1}</span>
-                          <span className='text-red-400'>
-                            {formatPrice(level, selectedAsset.type)}
-                          </span>
-                        </div>
-                      )
+          {/* Macro Indicators Section */}
+          {Object.entries(groupedIndicators).map(
+            ([category, categoryIndicators]) =>
+              categoryIndicators.length > 0 ? (
+                <div key={category} className='mt-6 bg-gray-800 rounded-lg p-6'>
+                  <div className='mb-4'>
+                    <h3 className='text-xl font-semibold text-blue-100'>
+                      {categoryTitles[category] ||
+                        category.replace('_', ' ').title()}
+                    </h3>
+                    {categoryDescriptions[category] && (
+                      <p className='text-sm text-gray-400 mt-1'>
+                        {categoryDescriptions[category]}
+                      </p>
                     )}
                   </div>
-                </div>
-                <div>
-                  <h4 className='text-lg font-medium text-blue-200 mb-2'>
-                    Support
-                  </h4>
-                  <div className='space-y-2'>
-                    {analysis.technical_indicators.levels?.support?.map(
-                      (level, i) => (
-                        <div key={i} className='flex justify-between'>
-                          <span className='text-green-400'>S{i + 1}</span>
-                          <span className='text-green-400'>
-                            {formatPrice(level, selectedAsset.type)}
-                          </span>
-                        </div>
-                      )
-                    )}
+                  <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                    {categoryIndicators.map((indicator) => (
+                      <IndicatorCard
+                        key={indicator.key}
+                        indicator={indicator}
+                        trend={indicator.trend}
+                      />
+                    ))}
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
+              ) : null
+          )}
+        </>
       )}
 
       {/* Test button */}
@@ -1067,40 +1026,6 @@ const MarketIntelligence = () => {
             ))}
           </div>
         </div>
-      )}
-
-      {loading ? (
-        <div className='flex justify-center items-center h-64'>
-          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400'></div>
-        </div>
-      ) : (
-        Object.entries(groupedIndicators).map(
-          ([category, categoryIndicators]) =>
-            categoryIndicators.length > 0 && (
-              <div key={category} className='mb-8'>
-                <div className='mb-4'>
-                  <h3 className='text-xl font-semibold text-blue-100'>
-                    {categoryTitles[category] ||
-                      category.replace('_', ' ').title()}
-                  </h3>
-                  {categoryDescriptions[category] && (
-                    <p className='text-sm text-gray-400 mt-1'>
-                      {categoryDescriptions[category]}
-                    </p>
-                  )}
-                </div>
-                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                  {categoryIndicators.map((indicator) => (
-                    <IndicatorCard
-                      key={indicator.key}
-                      indicator={indicator}
-                      trend={marketData.trends[indicator.key]}
-                    />
-                  ))}
-                </div>
-              </div>
-            )
-        )
       )}
     </div>
   );
