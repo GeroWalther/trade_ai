@@ -321,13 +321,6 @@ const MarketIntelligence = () => {
     fetchIndicators();
   }, [selectedAsset.symbol, selectedTimeframe]);
 
-  // Add this to check the data flow
-  useEffect(() => {
-    if (marketData?.prices) {
-      console.log('Current prices:', marketData.prices);
-    }
-  }, [marketData]);
-
   const handleClearCache = async () => {
     try {
       await axios.post(`${config.api.baseUrl}/api/clear-cache`);
@@ -560,6 +553,121 @@ const MarketIntelligence = () => {
   const handleTimeframeChange = (event) => {
     console.log('Timeframe changed to:', event.target.value);
     setSelectedTimeframe(event.target.value);
+  };
+
+  // Test Indicators button handler
+  const handleTestIndicators = async () => {
+    try {
+      setLoading(true);
+      setAnalysisStatus('Testing indicators...');
+      const symbol = selectedAsset.symbol;
+      const response = await axios.get(
+        `${config.api.baseUrl}/api/test-indicators/${symbol}`
+      );
+      // console.log('Raw Technical Indicators Response:', response.data);
+
+      if (response.data.status === 'success' && response.data.data) {
+        // Extract and validate the indicator data
+        const rawData = response.data.data;
+        console.log('!!!!! Raw Technical Data:', rawData);
+
+        // Update analysis state with raw data
+        setAnalysis((prev) => ({
+          ...prev,
+          technical_indicators: rawData,
+          timestamp: new Date().toISOString(),
+        }));
+
+        // Update marketData with validated technical indicators
+        setMarketData((prev) => ({
+          ...prev,
+          technicalIndicators: {
+            ...prev.technicalIndicators,
+            [selectedAsset.symbol]: {
+              ema: {
+                value: rawData.EMA50?.value ?? 0,
+                currentPrice: rawData.EMA50?.current_price ?? 0,
+              },
+              macd: {
+                value: rawData.MACD?.value?.toFixed(6) ?? 0,
+                trend: rawData.MACD?.trend ?? 'NEUTRAL',
+                histogram: rawData.MACD?.hist.toFixed(6) ?? 0,
+                signal: rawData.MACD?.signal.toFixed(6) ?? 0,
+              },
+              rsi: {
+                strength: rawData.RSI?.strength || 50,
+                value: rawData.RSI?.value || 50,
+                signal: rawData.RSI?.signal ?? 'NEUTRAL',
+              },
+              atr: {
+                value: rawData.ATR?.value || 0,
+                status: rawData.ATR?.status || 'NORMAL RANGE',
+              },
+              levels: rawData.levels,
+              timestamp: new Date().toISOString(),
+            },
+          },
+        }));
+
+        setAnalysisStatus('');
+      } else {
+        console.error('Invalid response format:', response.data);
+        setAnalysisStatus('Invalid response from server');
+      }
+    } catch (error) {
+      console.error('Test error:', error);
+      setAnalysisStatus('Failed to fetch indicators');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // News button handler
+  const handleFetchNews = async () => {
+    try {
+      setLoading(true);
+      setAnalysisStatus('Fetching news...');
+      const symbol = selectedAsset.symbol;
+      const response = await axios.get(
+        `${config.api.baseUrl}/api/news/${symbol}`
+      );
+      // console.log('Raw News Response:', response.data);
+
+      if (response.data.status === 'success') {
+        const newsData = response.data.data;
+        console.log('Processed News Data:', newsData); // Debug log
+
+        // Update analysis state
+        setAnalysis((prev) => ({
+          ...prev,
+          news: newsData,
+          newsTimestamp: new Date().toISOString(),
+        }));
+
+        // Update marketData with structured news data
+        setMarketData((prev) => ({
+          ...prev,
+          news: {
+            ...prev.news,
+            [selectedAsset.symbol]: {
+              articles: newsData.map((article) => ({
+                title: article.title,
+                description: article.description,
+                url: article.url,
+                source: article.source,
+                sentiment: article.sentiment,
+                timestamp: article.timestamp,
+              })),
+              timestamp: new Date().toISOString(),
+            },
+          },
+        }));
+      }
+    } catch (error) {
+      console.error('News fetch error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -900,84 +1008,14 @@ const MarketIntelligence = () => {
       {/* Test button */}
       <div className='flex gap-4'>
         <button
-          onClick={async () => {
-            try {
-              setLoading(true);
-              setAnalysisStatus('Fetching indicators...');
-              const symbol = selectedAsset.symbol;
-              const response = await axios.get(
-                `${config.api.baseUrl}/api/test-indicators/${symbol}`
-              );
-              console.log('Technical Indicators Response:', response.data);
-
-              if (response.data.status === 'success') {
-                setAnalysis({
-                  technical_indicators: response.data.data,
-                  timestamp: new Date().toISOString(),
-                });
-                setAnalysisStatus('');
-              } else {
-                const message = response.data.message;
-                setAnalysisStatus(
-                  message.includes('Invalid or unsupported symbol')
-                    ? `Asset ${selectedAsset.name} not supported`
-                    : message || 'Failed to get indicators'
-                );
-              }
-            } catch (error) {
-              console.error('Test error:', error);
-              setAnalysisStatus(
-                error.response?.data?.message ||
-                  error.message ||
-                  'Failed to fetch indicators'
-              );
-            } finally {
-              setLoading(false);
-            }
-          }}
+          onClick={handleTestIndicators}
           disabled={loading}
           className='bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors'>
           {loading ? 'Loading...' : 'Test Indicators'}
         </button>
 
         <button
-          onClick={async () => {
-            try {
-              setLoading(true);
-              setAnalysisStatus('Fetching news...');
-              const symbol = selectedAsset.symbol;
-              const response = await axios.get(
-                `${config.api.baseUrl}/api/news/${symbol}`
-              );
-              console.log('News Response:', response.data);
-
-              if (response.data.status === 'success') {
-                setAnalysis((prev) => ({
-                  ...prev,
-                  news: response.data.data,
-                  newsTimestamp: new Date().toISOString(),
-                }));
-                setAnalysisStatus('');
-                setMarketData((prev) => ({
-                  ...prev,
-                  news: response.data.data,
-                }));
-              } else {
-                setAnalysisStatus(
-                  response.data.message || 'Failed to fetch news'
-                );
-              }
-            } catch (error) {
-              console.error('News fetch error:', error);
-              setAnalysisStatus(
-                error.response?.data?.message ||
-                  error.message ||
-                  'Failed to fetch news'
-              );
-            } finally {
-              setLoading(false);
-            }
-          }}
+          onClick={handleFetchNews}
           disabled={loading}
           className='bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors'>
           {loading ? 'Loading...' : 'Fetch News'}

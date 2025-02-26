@@ -10,8 +10,6 @@ import {
 } from 'recharts';
 
 const PriceChart = ({ prices, timeframe }) => {
-  console.log('Prices received in chart:', prices, 'timeframe:', timeframe);
-
   if (!prices || prices.length === 0) {
     return (
       <div className='text-center text-gray-500 p-4'>
