@@ -976,6 +976,103 @@ const MarketIntelligence = () => {
             </div>
           )}
 
+          {/* AI Analysis Section */}
+          {analysis?.summary && (
+            <div className='bg-gray-800 p-6 rounded-lg mt-6'>
+              <h3 className='text-xl font-semibold text-blue-100 mb-4'>
+                AI Market Analysis
+              </h3>
+
+              {/* Trading Direction */}
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mb-4'>
+                <div className='bg-gray-700 p-4 rounded'>
+                  <h4 className='text-lg font-medium text-blue-200 mb-2'>
+                    Trading Direction
+                  </h4>
+                  <div
+                    className={`text-2xl ${
+                      analysis.trading_strategy.direction === 'BULLISH'
+                        ? 'text-green-400'
+                        : analysis.trading_strategy.direction === 'BEARISH'
+                        ? 'text-red-400'
+                        : 'text-gray-400'
+                    }`}>
+                    {analysis.trading_strategy.direction}
+                  </div>
+                </div>
+
+                {/* Entry/Exit Points */}
+                <div className='bg-gray-700 p-4 rounded'>
+                  <h4 className='text-lg font-medium text-blue-200 mb-2'>
+                    Entry/Exit Points
+                  </h4>
+                  <div className='space-y-2'>
+                    <div className='flex justify-between'>
+                      <span className='text-gray-400'>Entry Price:</span>
+                      <span className='text-white'>
+                        {formatPrice(
+                          analysis.trading_strategy.entry.price,
+                          selectedAsset.type
+                        )}
+                      </span>
+                    </div>
+                    <div className='flex justify-between'>
+                      <span className='text-gray-400'>Stop Loss:</span>
+                      <span className='text-white'>
+                        {formatPrice(
+                          analysis.trading_strategy.stopLoss.price,
+                          selectedAsset.type
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Key Factors */}
+              <div className='bg-gray-700 p-4 rounded mb-4'>
+                <h4 className='text-lg font-medium text-blue-200 mb-2'>
+                  Key Factors
+                </h4>
+                <ul className='list-disc list-inside space-y-1'>
+                  {analysis.key_factors.map((factor, index) => (
+                    <li key={index} className='text-gray-300'>
+                      {factor}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Detailed Analysis */}
+              <div className='bg-gray-700 p-4 rounded'>
+                <h4 className='text-lg font-medium text-blue-200 mb-2'>
+                  Detailed Analysis
+                </h4>
+                <div className='text-gray-300 whitespace-pre-wrap'>
+                  {/* Remove the [TextBlock...] wrapper and just show the content */}
+                  {analysis.summary
+                    .replace(/\[TextBlock\([^)]*\),"([^"]*)"[^\]]*\]/, '$1')
+                    .replace(/\\n/g, '\n')}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* AI Analysis Loading State */}
+          {loading && analysisStatus.includes('AI analysis') && (
+            <div className='bg-gray-800 p-6 rounded-lg mt-6'>
+              <div className='animate-pulse flex space-x-4'>
+                <div className='flex-1 space-y-4 py-1'>
+                  <div className='h-4 bg-gray-700 rounded w-3/4'></div>
+                  <div className='space-y-2'>
+                    <div className='h-4 bg-gray-700 rounded'></div>
+                    <div className='h-4 bg-gray-700 rounded w-5/6'></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Macro Indicators Section */}
         </>
       )}
