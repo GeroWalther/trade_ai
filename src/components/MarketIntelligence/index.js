@@ -583,19 +583,34 @@ const MarketIntelligence = () => {
     fetchMacroIndicators();
   }, []); // Empty dependency array means this runs once on mount
 
-  // Keep handleTestIndicators focused only on technical indicators
+  // Update handleTestIndicators to include timeframe
   const handleTestIndicators = async () => {
     try {
       setLoading(true);
       setAnalysisStatus('Testing indicators...');
       const symbol = selectedAsset.symbol;
+      const timeframe = selectedTimeframe.toUpperCase();
+
+      console.log('Making request with:', {
+        symbol,
+        timeframe,
+        url: `${config.api.baseUrl}/api/test-indicators/${symbol}`,
+      });
+
       const response = await axios.get(
-        `${config.api.baseUrl}/api/test-indicators/${symbol}`
+        `${config.api.baseUrl}/api/test-indicators/${symbol}`,
+        {
+          params: {
+            timeframe: timeframe,
+          },
+        }
       );
+
+      console.log('Received response:', response.data); // Add this log
 
       if (response.data.status === 'success' && response.data.data) {
         const rawData = response.data.data;
-        console.log('!!!!! Raw Technical Data:', rawData);
+        console.log('Raw Technical Data:', rawData); // Keep this existing log
 
         // Update analysis state with raw data
         setAnalysis((prev) => ({
@@ -638,8 +653,8 @@ const MarketIntelligence = () => {
         setAnalysisStatus('');
       }
     } catch (error) {
-      console.error('Test error:', error);
-      setAnalysisStatus('Failed to fetch indicators');
+      console.error('Error testing indicators:', error);
+      setAnalysisStatus('Error testing indicators');
     } finally {
       setLoading(false);
     }
@@ -934,33 +949,6 @@ const MarketIntelligence = () => {
           )}
 
           {/* Macro Indicators Section */}
-          {Object.entries(groupedIndicators).map(
-            ([category, categoryIndicators]) =>
-              categoryIndicators.length > 0 ? (
-                <div key={category} className='mt-6 bg-gray-800 rounded-lg p-6'>
-                  <div className='mb-4'>
-                    <h3 className='text-xl font-semibold text-blue-100'>
-                      {categoryTitles[category] ||
-                        category.replace('_', ' ').title()}
-                    </h3>
-                    {categoryDescriptions[category] && (
-                      <p className='text-sm text-gray-400 mt-1'>
-                        {categoryDescriptions[category]}
-                      </p>
-                    )}
-                  </div>
-                  <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                    {categoryIndicators.map((indicator) => (
-                      <IndicatorCard
-                        key={indicator.key}
-                        indicator={indicator}
-                        trend={indicator.trend}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : null
-          )}
         </>
       )}
 
@@ -1026,6 +1014,31 @@ const MarketIntelligence = () => {
             ))}
           </div>
         </div>
+      )}
+      {Object.entries(groupedIndicators).map(([category, categoryIndicators]) =>
+        categoryIndicators.length > 0 ? (
+          <div key={category} className='mt-6 bg-gray-800 rounded-lg p-6'>
+            <div className='mb-4'>
+              <h3 className='text-xl font-semibold text-blue-100'>
+                {categoryTitles[category] || category.replace('_', ' ').title()}
+              </h3>
+              {categoryDescriptions[category] && (
+                <p className='text-sm text-gray-400 mt-1'>
+                  {categoryDescriptions[category]}
+                </p>
+              )}
+            </div>
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+              {categoryIndicators.map((indicator) => (
+                <IndicatorCard
+                  key={indicator.key}
+                  indicator={indicator}
+                  trend={indicator.trend}
+                />
+              ))}
+            </div>
+          </div>
+        ) : null
       )}
     </div>
   );
