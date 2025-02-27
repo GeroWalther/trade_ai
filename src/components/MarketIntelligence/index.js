@@ -274,11 +274,14 @@ const MarketIntelligence = () => {
     technicalIndicators: {},
     macroIndicators: {},
     lastUpdate: null,
+    selectedTimeframe: 'Intraday',
+    selectedAsset: 'EUR_USD',
   });
   // const [pricesLoading, setPricesLoading] = useState(false);
   // const [lastFetch, setLastFetch] = useState(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState('Intraday');
   console.log('MARKET DATA: ', marketData);
+
   const fetchIndicators = async () => {
     try {
       setLoading(true);
@@ -312,6 +315,19 @@ const MarketIntelligence = () => {
       setLoading(false);
     }
   };
+  useEffect(() => {
+    setMarketData((prev) => ({
+      ...prev,
+      selectedTimeframe: selectedTimeframe,
+    }));
+  }, [selectedTimeframe]);
+
+  useEffect(() => {
+    setMarketData((prev) => ({
+      ...prev,
+      selectedAsset: selectedAsset,
+    }));
+  }, [selectedAsset]);
 
   // Fetch when asset or timeframe changes
   useEffect(() => {
@@ -733,9 +749,9 @@ const MarketIntelligence = () => {
           value={selectedTimeframe}
           onChange={handleTimeframeChange}
           className='bg-gray-700 text-white px-4 py-2 rounded'>
-          <option value='Intraday'>Intraday (1-8h)</option>
-          <option value='Swing'>Swing (2-5 days)</option>
-          <option value='Position'>Position (1-4 weeks)</option>
+          <option value='Intraday_1-8h_trade'>Intraday (1-8h)</option>
+          <option value='Swing_2-5d_trade'>Swing (2-5 days)</option>
+          <option value='Position_1-4w_trade'>Position (1-4 weeks)</option>
         </select>
       </div>
 
