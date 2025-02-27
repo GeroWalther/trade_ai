@@ -460,24 +460,36 @@ const MarketIntelligence = () => {
 
   const handleAnalyze = async () => {
     setLoading(true);
-    setAnalysisStatus('Starting analysis...');
+    setAnalysisStatus('Starting AI analysis...');
     try {
-      const result = await analysisService.analyzeAsset(
-        selectedAsset.symbol,
-        selectedTerm,
-        riskLevel
+      // Prepare payload with market data and risk level
+      const payload = {
+        asset: selectedAsset.symbol,
+        marketData: marketData,
+        riskLevel: riskLevel,
+        timeframe: selectedTimeframe,
+      };
+
+      console.log('Sending analysis request with payload:', payload);
+
+      const response = await axios.post(
+        `${config.api.baseUrl}/api/ai-analysis`,
+        payload
       );
 
-      if (result.status === 'success') {
-        setAnalysis(result.data);
+      console.log('Received AI analysis response:', response.data);
+
+      if (response.data.status === 'success') {
+        setAnalysis(response.data.data);
         setAnalysisStatus('');
+      } else {
+        throw new Error(response.data.message || 'Analysis failed');
       }
     } catch (error) {
-      console.error('Analysis error:', error);
+      console.error('AI Analysis error:', error);
       setAnalysisStatus(
-        error.type === 'NETWORK_ERROR'
-          ? 'Unable to connect to analysis server'
-          : 'Analysis failed'
+        error.response?.data?.message ||
+          'Failed to complete analysis. Please try again.'
       );
     } finally {
       setLoading(false);
