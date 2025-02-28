@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 import MarketIntelligence from '../components/MarketIntelligence';
 import BotMonitor from '../components/BotMonitor';
-import TradingStatus from '../components/TradingStatus';
 import MarketOverview from '../components/MarketOverview';
 
 export const RootNav = () => {

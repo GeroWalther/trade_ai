@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import TradingService from '../services/trading_service';
 import { config } from '../config';
 
 const MarketOverview = () => {
@@ -20,6 +21,25 @@ const MarketOverview = () => {
     'BTC_USD',
   ]);
   const [showPositionsModal, setShowPositionsModal] = useState(false);
+  const [tradingStatus, setTradingStatus] = useState(null);
+  const [error, setError] = useState(null);
+
+  const fetchData = async () => {
+    try {
+      const data = await TradingService.getTradingStatus();
+      setTradingStatus(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching trading data:', err);
+      setError(err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const addInstrument = (instrument) => {
     setActiveInstruments([...activeInstruments, instrument]);
@@ -29,7 +49,8 @@ const MarketOverview = () => {
     setActiveInstruments(activeInstruments.filter((i) => i !== instrument));
   };
 
-  if (!marketPrices || !account) return <div>Loading market data...</div>;
+  if (!tradingStatus?.marketPrices || !tradingStatus?.account)
+    return <div>Loading market data...</div>;
 
   const formatPrice = (price) => {
     if (!price || typeof price !== 'number') return 'N/A';
@@ -171,25 +192,6 @@ const MarketOverview = () => {
     };
   };
 
-  const [tradingStatus, setTradingStatus] = useState(null);
-  const [error, setError] = useState(null);
-  const fetchData = async () => {
-    try {
-      const data = await TradingService.getTradingStatus();
-      setTradingStatus(data);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching trading data:', err);
-      setError(err.message);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
   if (error) {
     return (
       <div className='p-6 bg-rose-900 text-rose-200 rounded'>
@@ -220,15 +222,17 @@ const MarketOverview = () => {
           <h3 className='text-blue-300 mb-2'>Unrealized P/L</h3>
           <p
             className={`text-2xl font-bold ${
-              account?.unrealized_pl >= 0 ? 'text-emerald-400' : 'text-rose-400'
+              tradingStatus.account?.unrealized_pl >= 0
+                ? 'text-emerald-400'
+                : 'text-rose-400'
             }`}>
-            {formatCurrency(account?.unrealized_pl)}
+            {formatCurrency(tradingStatus.account?.unrealized_pl)}
           </p>
         </div>
         <div>
           <h3 className='text-blue-300 mb-2'>Current Value</h3>
           <p className='text-2xl font-bold'>
-            {formatCurrency(account?.total_value)}
+            {formatCurrency(tradingStatus.account?.total_value)}
           </p>
         </div>
       </div>

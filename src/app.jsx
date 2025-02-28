@@ -1,5 +1,4 @@
 import React from 'react';
-import TradingStatus from './components/TradingStatus';
 import RootNav from './Navigation/RootNav';
 const App = () => {
   return (
