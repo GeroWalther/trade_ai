@@ -87,6 +87,10 @@ class AnalysisService {
     try {
       console.log(`Starting advanced market analysis for ${asset}...`);
 
+      // Add a small random delay to avoid multiple simultaneous requests
+      const randomDelay = Math.floor(Math.random() * 500);
+      await new Promise((resolve) => setTimeout(resolve, randomDelay));
+
       const response = await axios.post(
         `${config.api.baseUrl}/api/advanced-market-analysis`,
         {
@@ -122,28 +126,49 @@ class AnalysisService {
         status: 'error',
         message:
           response.data?.message || 'Failed to get advanced market analysis',
-        data: {
-          market_summary: 'Analysis failed',
-          key_drivers: [],
-          technical_analysis: 'Analysis unavailable',
-          risk_assessment: 'Analysis unavailable',
-          trading_strategy: {
-            direction: 'NEUTRAL',
-            rationale: 'Analysis unavailable',
-            entry: { price: '0', rationale: 'Analysis unavailable' },
-            stop_loss: { price: '0', rationale: 'Analysis unavailable' },
-            take_profit_1: { price: '0', rationale: 'Analysis unavailable' },
-            take_profit_2: { price: '0', rationale: 'Analysis unavailable' },
-          },
-        },
       };
     } catch (error) {
       console.error('Advanced market analysis error:', error);
-      throw {
-        message: 'Network error: Unable to connect to analysis server',
-        details: error.message,
-        type: 'NETWORK_ERROR',
-      };
+
+      // Handle different types of errors
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.error('Server error response:', error.response.data);
+
+        // Special handling for rate limit errors (429)
+        if (error.response.status === 429) {
+          return {
+            status: 'error',
+            message:
+              'Rate limit exceeded when accessing market data. Please try again later.',
+            isRateLimit: true,
+          };
+        }
+
+        return {
+          status: 'error',
+          message:
+            error.response.data?.message ||
+            `Server error: ${error.response.status}`,
+        };
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error('No response received:', error.request);
+        return {
+          status: 'error',
+          message:
+            'No response received from server. Please check your connection.',
+        };
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        return {
+          status: 'error',
+          message:
+            error.message ||
+            'Network error: Unable to connect to analysis server',
+        };
+      }
     }
   }
 }

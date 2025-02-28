@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import analysisService from '../services/analysis_service';
 
 export const AIAnalysis = () => {
@@ -8,6 +8,40 @@ export const AIAnalysis = () => {
   const [isMockData, setIsMockData] = useState(false);
   const [currentPrice, setCurrentPrice] = useState(null);
   const [priceValidation, setPriceValidation] = useState(null);
+  const [cooldownActive, setCooldownActive] = useState(false);
+  const [cooldownTime, setCooldownTime] = useState(0);
+  const cooldownTimerRef = useRef(null);
+  const isRequestPendingRef = useRef(false);
+
+  // Cleanup timer on component unmount
+  useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current) {
+        clearInterval(cooldownTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Start cooldown timer function
+  const startCooldown = (seconds = 60) => {
+    setCooldownActive(true);
+    setCooldownTime(seconds);
+
+    if (cooldownTimerRef.current) {
+      clearInterval(cooldownTimerRef.current);
+    }
+
+    cooldownTimerRef.current = setInterval(() => {
+      setCooldownTime((prevTime) => {
+        if (prevTime <= 1) {
+          clearInterval(cooldownTimerRef.current);
+          setCooldownActive(false);
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+  };
 
   // Validate if the trading strategy makes sense given current market prices
   const validatePricePoints = (strategy, currentMarketPrice) => {
@@ -85,7 +119,16 @@ export const AIAnalysis = () => {
   };
 
   const analyzeMarket = async () => {
+    // Prevent multiple clicks or requests in progress
+    if (isRequestPendingRef.current || loading || cooldownActive) {
+      console.log(
+        'Request already in progress or cooldown active, ignoring click'
+      );
+      return;
+    }
+
     try {
+      isRequestPendingRef.current = true;
       setLoading(true);
       setError(null);
       setIsMockData(false);
@@ -108,6 +151,7 @@ export const AIAnalysis = () => {
 
       if (result.status === 'success') {
         setAnalysis(result.data);
+        console.log('Full analysis data:', result.data);
 
         // Check if this is mock data
         if (result.mock) {
@@ -118,18 +162,55 @@ export const AIAnalysis = () => {
         // Get current price from the response
         if (result.data.current_market_price) {
           const price = result.data.current_market_price;
-          console.log(`Current ${asset} price from backend: ${price}`);
-          setCurrentPrice(price);
-
-          // Validate the strategy against the current price
-          const validation = validatePricePoints(
-            result.data.trading_strategy,
-            price
+          console.log(
+            `Current ${asset} price from backend:`,
+            price,
+            typeof price
           );
-          setPriceValidation(validation);
+
+          // Ensure price is a number
+          const numericPrice =
+            typeof price === 'string'
+              ? parseFloat(price.replace(/,/g, ''))
+              : price;
+          console.log('Numeric price:', numericPrice);
+
+          if (!isNaN(numericPrice)) {
+            setCurrentPrice(numericPrice);
+
+            // Validate the strategy against the current price
+            const validation = validatePricePoints(
+              result.data.trading_strategy,
+              numericPrice
+            );
+            setPriceValidation(validation);
+          } else {
+            console.error('Invalid price format received:', price);
+            setError('Invalid price data received from server');
+          }
+        } else {
+          console.warn('No current market price in the response');
         }
       } else {
+        // Handle error from backend
+        console.error('Error from backend:', result.message);
         setError(result.message || 'Failed to analyze market');
+
+        // If there's a specific error about rate limiting or market data
+        if (
+          result.isRateLimit ||
+          (result.message && result.message.includes('Rate limit exceeded'))
+        ) {
+          setError(
+            'Yahoo Finance API rate limit exceeded. Please try again in 60 seconds.'
+          );
+          // Start a cooldown timer to prevent further requests
+          startCooldown(60);
+        } else if (result.message && result.message.includes('market data')) {
+          setError(
+            'Unable to fetch current market data. Please try again later or check the console for more information.'
+          );
+        }
       }
     } catch (err) {
       console.error('Error analyzing market:', err);
@@ -142,6 +223,7 @@ export const AIAnalysis = () => {
       }
     } finally {
       setLoading(false);
+      isRequestPendingRef.current = false;
     }
   };
 
@@ -153,6 +235,9 @@ export const AIAnalysis = () => {
       <div className='mt-4 bg-[#1a1f3c] p-4 rounded-lg'>
         <h4 className='text-xl font-semibold text-blue-300 mb-2'>
           Trading Strategy
+          <span className='text-xs text-gray-400 ml-2 font-normal'>
+            Generated on {new Date().toLocaleString()}
+          </span>
         </h4>
         <div className='mb-2'>
           <span className='text-gray-300 font-medium'>Direction: </span>
@@ -171,8 +256,22 @@ export const AIAnalysis = () => {
               Current Market Price:{' '}
             </span>
             <span className='text-white font-bold'>
-              {currentPrice.toLocaleString()}
+              {typeof currentPrice === 'number'
+                ? currentPrice.toLocaleString(undefined, {
+                    maximumFractionDigits: 2,
+                  })
+                : currentPrice}
             </span>
+            <p className='text-gray-400 text-sm mt-1'>
+              All price targets are relative to this current market price.
+            </p>
+            {currentPrice < 16000 && (
+              <p className='text-yellow-300 text-sm mt-1'>
+                Note: The current Nasdaq price should be around 18,000. If you
+                see a significantly different value, there may be an issue with
+                the price data source.
+              </p>
+            )}
           </div>
         )}
 
@@ -238,10 +337,14 @@ export const AIAnalysis = () => {
         </p>
         <button
           className={`${
-            loading ? 'bg-blue-800' : 'bg-blue-600 hover:bg-blue-700'
+            loading
+              ? 'bg-blue-800'
+              : cooldownActive
+              ? 'bg-gray-600 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700'
           } text-white py-2 px-4 rounded transition-colors flex items-center`}
           onClick={analyzeMarket}
-          disabled={loading}>
+          disabled={loading || cooldownActive}>
           {loading ? (
             <>
               <svg
@@ -263,6 +366,22 @@ export const AIAnalysis = () => {
               </svg>
               Analyzing...
             </>
+          ) : cooldownActive ? (
+            <>
+              <svg
+                className='animate-pulse -ml-1 mr-3 h-5 w-5 text-white'
+                fill='none'
+                viewBox='0 0 24 24'
+                stroke='currentColor'>
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'
+                />
+              </svg>
+              Cooldown: {cooldownTime}s
+            </>
           ) : (
             'Run AI Analysis'
           )}
@@ -272,6 +391,23 @@ export const AIAnalysis = () => {
       {error && (
         <div className='bg-red-900/50 border border-red-700 text-red-200 p-4 rounded-lg mb-6'>
           <p className='font-medium'>Error: {error}</p>
+          {error.includes('Rate limit exceeded') && (
+            <div className='mt-2 text-sm'>
+              <p>
+                Yahoo Finance limits the number of requests we can make to their
+                API. This helps us:
+              </p>
+              <ul className='list-disc pl-5 mt-1'>
+                <li>Avoid being blocked by their servers</li>
+                <li>Ensure fair usage of their free data service</li>
+                <li>Maintain reliable access for all users</li>
+              </ul>
+              <p className='mt-2'>
+                The cooldown timer will let you know when it's safe to try
+                again.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -288,6 +424,31 @@ export const AIAnalysis = () => {
           <h3 className='text-xl font-bold text-blue-300 mb-3'>
             Market Analysis Results
           </h3>
+
+          {currentPrice && (
+            <div className='mb-4 bg-blue-900/30 p-3 rounded border border-blue-700'>
+              <span className='text-blue-300 font-medium'>
+                Analysis based on current Nasdaq price:{' '}
+              </span>
+              <span className='text-white font-bold'>
+                {typeof currentPrice === 'number'
+                  ? currentPrice.toLocaleString(undefined, {
+                      maximumFractionDigits: 2,
+                    })
+                  : currentPrice}
+              </span>
+              <p className='text-gray-400 text-sm mt-1'>
+                Analysis generated on {new Date().toLocaleString()}
+              </p>
+              {currentPrice < 16000 && (
+                <p className='text-yellow-300 text-sm mt-1'>
+                  Note: The current Nasdaq price should be around 18,000. If you
+                  see a significantly different value, there may be an issue
+                  with the price data source.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className='mb-4'>
             <h4 className='text-lg font-semibold text-blue-300 mb-2'>
