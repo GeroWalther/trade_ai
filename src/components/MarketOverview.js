@@ -49,9 +49,6 @@ const MarketOverview = () => {
     setActiveInstruments(activeInstruments.filter((i) => i !== instrument));
   };
 
-  if (!tradingStatus?.market_prices || !tradingStatus?.account)
-    return <div>Loading market data...</div>;
-
   const formatPrice = (price) => {
     if (!price || typeof price !== 'number') return 'N/A';
     return price.toFixed(5);
