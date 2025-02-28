@@ -82,6 +82,70 @@ class AnalysisService {
       };
     }
   }
+
+  async advancedMarketAnalysis(asset, term, riskLevel) {
+    try {
+      console.log(`Starting advanced market analysis for ${asset}...`);
+
+      const response = await axios.post(
+        `${config.api.baseUrl}/api/advanced-market-analysis`,
+        {
+          asset,
+          term,
+          riskLevel,
+        },
+        {
+          timeout: config.api.timeout,
+          timeoutErrorMessage:
+            'The analysis is taking longer than expected. Please try again later.',
+        }
+      );
+
+      console.log(`Received response for ${asset} analysis`);
+
+      // Check if we have a valid response with data
+      if (response.data?.status === 'success' && response.data?.data) {
+        // Check if this is a mock response
+        if (response.data?.mock) {
+          console.log('Received mock data response');
+        }
+
+        return {
+          status: 'success',
+          data: response.data.data,
+          mock: response.data?.mock || false,
+        };
+      }
+
+      // If we don't have a success status or data, return a formatted error
+      return {
+        status: 'error',
+        message:
+          response.data?.message || 'Failed to get advanced market analysis',
+        data: {
+          market_summary: 'Analysis failed',
+          key_drivers: [],
+          technical_analysis: 'Analysis unavailable',
+          risk_assessment: 'Analysis unavailable',
+          trading_strategy: {
+            direction: 'NEUTRAL',
+            rationale: 'Analysis unavailable',
+            entry: { price: '0', rationale: 'Analysis unavailable' },
+            stop_loss: { price: '0', rationale: 'Analysis unavailable' },
+            take_profit_1: { price: '0', rationale: 'Analysis unavailable' },
+            take_profit_2: { price: '0', rationale: 'Analysis unavailable' },
+          },
+        },
+      };
+    } catch (error) {
+      console.error('Advanced market analysis error:', error);
+      throw {
+        message: 'Network error: Unable to connect to analysis server',
+        details: error.message,
+        type: 'NETWORK_ERROR',
+      };
+    }
+  }
 }
 
 export default new AnalysisService();
