@@ -425,6 +425,27 @@ export const AIAnalysis = () => {
             Market Analysis Results
           </h3>
 
+          {/* Display metadata about the analysis sources */}
+          {analysis.meta && (
+            <div className='mb-4 bg-indigo-900/30 p-3 rounded border border-indigo-700'>
+              <p className='text-indigo-300 font-medium'>
+                Analysis Information
+              </p>
+              <p className='text-gray-300 text-sm mt-1'>
+                Generated on:{' '}
+                {analysis.meta.generated_at || new Date().toLocaleString()}
+              </p>
+              <p className='text-gray-300 text-sm'>
+                Model: {analysis.meta.model || 'AI Analysis'}
+              </p>
+              {analysis.meta.note && (
+                <p className='text-gray-300 text-sm mt-1'>
+                  {analysis.meta.note}
+                </p>
+              )}
+            </div>
+          )}
+
           {currentPrice && (
             <div className='mb-4 bg-blue-900/30 p-3 rounded border border-blue-700'>
               <span className='text-blue-300 font-medium'>
