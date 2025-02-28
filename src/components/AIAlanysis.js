@@ -13,6 +13,32 @@ export const AIAnalysis = () => {
   const cooldownTimerRef = useRef(null);
   const isRequestPendingRef = useRef(false);
 
+  // Add state for user selections
+  const [selectedAsset, setSelectedAsset] = useState('Nasdaq');
+  const [selectedTerm, setSelectedTerm] = useState('Swing trade');
+  const [selectedRiskLevel, setSelectedRiskLevel] = useState('aggressive');
+
+  // Available options for dropdowns
+  const assetOptions = [
+    { value: 'Nasdaq', label: 'Nasdaq' },
+    { value: 'S&P500', label: 'S&P 500' },
+    { value: 'Gold', label: 'Gold' },
+    { value: 'USD/JPY', label: 'USD/JPY' },
+    { value: 'BTCUSD', label: 'Bitcoin (BTC/USD)' },
+  ];
+
+  const termOptions = [
+    { value: 'Day trade', label: 'Day Trade (1-2 days)' },
+    { value: 'Swing trade', label: 'Swing Trade (1-2 weeks)' },
+    { value: 'Position trade', label: 'Position Trade (1-3 months)' },
+  ];
+
+  const riskLevelOptions = [
+    { value: 'conservative', label: 'Conservative' },
+    { value: 'moderate', label: 'Moderate' },
+    { value: 'aggressive', label: 'Aggressive' },
+  ];
+
   // Cleanup timer on component unmount
   useEffect(() => {
     return () => {
@@ -135,12 +161,14 @@ export const AIAnalysis = () => {
       setPriceValidation(null);
       setCurrentPrice(null);
 
-      // Fixed parameters as per requirements
-      const asset = 'Nasdaq';
-      const term = 'Swing trade';
-      const riskLevel = 'aggressive';
+      // Use selected values from dropdowns instead of hardcoded values
+      const asset = selectedAsset;
+      const term = selectedTerm;
+      const riskLevel = selectedRiskLevel;
 
-      console.log('Starting market analysis...');
+      console.log(
+        `Starting market analysis for ${asset} (${term}, ${riskLevel})...`
+      );
 
       // Call the advanced market analysis service - backend will fetch the price
       const result = await analysisService.advancedMarketAnalysis(
@@ -265,13 +293,6 @@ export const AIAnalysis = () => {
             <p className='text-gray-400 text-sm mt-1'>
               All price targets are relative to this current market price.
             </p>
-            {currentPrice < 16000 && (
-              <p className='text-yellow-300 text-sm mt-1'>
-                Note: The current Nasdaq price should be around 18,000. If you
-                see a significantly different value, there may be an issue with
-                the price data source.
-              </p>
-            )}
           </div>
         )}
 
@@ -335,6 +356,55 @@ export const AIAnalysis = () => {
           Get advanced market insights powered by our AI algorithms. Analyze
           trends, patterns, and potential trading opportunities.
         </p>
+
+        {/* Add selection dropdowns */}
+        <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-4'>
+          <div>
+            <label className='block text-gray-300 mb-2'>Asset</label>
+            <select
+              className='w-full bg-[#2d3867] text-white py-2 px-3 rounded focus:outline-none focus:ring-2 focus:ring-blue-500'
+              value={selectedAsset}
+              onChange={(e) => setSelectedAsset(e.target.value)}
+              disabled={loading || cooldownActive}>
+              {assetOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className='block text-gray-300 mb-2'>Trading Term</label>
+            <select
+              className='w-full bg-[#2d3867] text-white py-2 px-3 rounded focus:outline-none focus:ring-2 focus:ring-blue-500'
+              value={selectedTerm}
+              onChange={(e) => setSelectedTerm(e.target.value)}
+              disabled={loading || cooldownActive}>
+              {termOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className='block text-gray-300 mb-2'>Risk Level</label>
+            <select
+              className='w-full bg-[#2d3867] text-white py-2 px-3 rounded focus:outline-none focus:ring-2 focus:ring-blue-500'
+              value={selectedRiskLevel}
+              onChange={(e) => setSelectedRiskLevel(e.target.value)}
+              disabled={loading || cooldownActive}>
+              {riskLevelOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <button
           className={`${
             loading
@@ -449,7 +519,8 @@ export const AIAnalysis = () => {
           {currentPrice && (
             <div className='mb-4 bg-blue-900/30 p-3 rounded border border-blue-700'>
               <span className='text-blue-300 font-medium'>
-                Analysis based on current Nasdaq price:{' '}
+                Analysis based on current{' '}
+                {analysis.meta?.asset || selectedAsset} price:{' '}
               </span>
               <span className='text-white font-bold'>
                 {typeof currentPrice === 'number'
@@ -461,13 +532,6 @@ export const AIAnalysis = () => {
               <p className='text-gray-400 text-sm mt-1'>
                 Analysis generated on {new Date().toLocaleString()}
               </p>
-              {currentPrice < 16000 && (
-                <p className='text-yellow-300 text-sm mt-1'>
-                  Note: The current Nasdaq price should be around 18,000. If you
-                  see a significantly different value, there may be an issue
-                  with the price data source.
-                </p>
-              )}
             </div>
           )}
 
