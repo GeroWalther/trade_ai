@@ -2,12 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { config } from '../config';
 
-const MarketOverview = ({
-  marketPrices,
-  account,
-  positions,
-  onTradeComplete,
-}) => {
+const MarketOverview = () => {
   const [availableInstruments, setAvailableInstruments] = useState([
     'EUR_USD',
     'GBP_USD',
@@ -71,8 +66,8 @@ const MarketOverview = ({
 
       if (response.data.status === 'success') {
         console.log(`Trade executed successfully: ${response.data.order_id}`);
-        if (onTradeComplete) {
-          onTradeComplete();
+        if (tradingStatus.onTradeComplete) {
+          tradingStatus.onTradeComplete();
         }
       } else {
         console.error('Trade failed:', response.data.message);
@@ -104,57 +99,57 @@ const MarketOverview = ({
     }
   };
 
-  const fetchAllPositions = async () => {
-    try {
-      const response = await axios.get(`${config.api.baseUrl}/api/positions`);
-      console.log('All open positions:', response.data);
-      if (response.data.status === 'success') {
-        const positions = response.data.positions;
-        console.log('Open positions:');
-        Object.entries(positions).forEach(([symbol, position]) => {
-          console.log(`
-            Symbol: ${symbol}
-            Side: ${position.side}
-            Quantity: ${position.quantity}
-            Entry: ${position.entry_price}
-            Current: ${position.current_price}
-            P/L: €${position.pl_euro.toFixed(2)} (${position.profit_pct.toFixed(
-            2
-          )}%)
-          `);
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching positions:', error);
-    }
-  };
+  // const fetchAllPositions = async () => {
+  //   try {
+  //     const response = await axios.get(`${config.api.baseUrl}/api/positions`);
+  //     console.log('All open positions:', response.data);
+  //     if (response.data.status === 'success') {
+  //       const positions = response.data.positions;
+  //       console.log('Open positions:');
+  //       Object.entries(positions).forEach(([symbol, position]) => {
+  //         console.log(`
+  //           Symbol: ${symbol}
+  //           Side: ${position.side}
+  //           Quantity: ${position.quantity}
+  //           Entry: ${position.entry_price}
+  //           Current: ${position.current_price}
+  //           P/L: €${position.pl_euro.toFixed(2)} (${position.profit_pct.toFixed(
+  //           2
+  //         )}%)
+  //         `);
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error('Error fetching positions:', error);
+  //   }
+  // };
 
-  const PriceDisplay = ({ symbol, price, action }) => {
-    if (!price) return <div>N/A</div>;
+  // const PriceDisplay = ({ symbol, price, action }) => {
+  //   if (!price) return <div>N/A</div>;
 
-    const direction = action?.direction || 'neutral';
-    const change = action?.change_percent || 0;
+  //   const direction = action?.direction || 'neutral';
+  //   const change = action?.change_percent || 0;
 
-    return (
-      <div>
-        <p className='text-3xl font-bold mb-2'>{formatPrice(price)}</p>
-        <div
-          className={`text-sm ${
-            direction === 'up'
-              ? 'text-emerald-400'
-              : direction === 'down'
-              ? 'text-rose-400'
-              : 'text-blue-300'
-          }`}>
-          <span className='mr-2'>
-            {direction === 'up' ? '↑' : direction === 'down' ? '↓' : '→'}
-          </span>
-          {change > 0 ? '+' : ''}
-          {change}%
-        </div>
-      </div>
-    );
-  };
+  //   return (
+  //     <div>
+  //       <p className='text-3xl font-bold mb-2'>{formatPrice(price)}</p>
+  //       <div
+  //         className={`text-sm ${
+  //           direction === 'up'
+  //             ? 'text-emerald-400'
+  //             : direction === 'down'
+  //             ? 'text-rose-400'
+  //             : 'text-blue-300'
+  //         }`}>
+  //         <span className='mr-2'>
+  //           {direction === 'up' ? '↑' : direction === 'down' ? '↓' : '→'}
+  //         </span>
+  //         {change > 0 ? '+' : ''}
+  //         {change}%
+  //       </div>
+  //     </div>
+  //   );
+  // };
 
   const getInstrumentType = (symbol) => {
     if (symbol.includes('BTC')) return 'CRYPTO';
@@ -176,6 +171,41 @@ const MarketOverview = ({
     };
   };
 
+  const [tradingStatus, setTradingStatus] = useState(null);
+  const [error, setError] = useState(null);
+  const fetchData = async () => {
+    try {
+      const data = await TradingService.getTradingStatus();
+      setTradingStatus(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching trading data:', err);
+      setError(err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (error) {
+    return (
+      <div className='p-6 bg-rose-900 text-rose-200 rounded'>
+        Error: {error}
+      </div>
+    );
+  }
+
+  if (!tradingStatus) {
+    return (
+      <div className='flex items-center justify-center h-screen bg-blue-950 text-blue-200'>
+        <div className='animate-pulse'>Loading trading data...</div>
+      </div>
+    );
+  }
+
   return (
     <div className='space-y-6'>
       {/* Account Overview */}
@@ -183,7 +213,7 @@ const MarketOverview = ({
         <div>
           <h3 className='text-blue-300 mb-2'>Initial Balance</h3>
           <p className='text-2xl font-bold'>
-            {formatCurrency(account?.balance)}
+            {formatCurrency(tradingStatus.account?.balance)}
           </p>
         </div>
         <div>
@@ -257,7 +287,7 @@ const MarketOverview = ({
                 </span>
               </div>
               <p className='text-2xl font-bold mb-4'>
-                {formatPrice(marketPrices?.[symbol]?.price)}
+                {formatPrice(tradingStatus.marketPrices?.[symbol]?.price)}
               </p>
               <div className='grid grid-cols-2 gap-4'>
                 <button
@@ -315,10 +345,10 @@ const MarketOverview = ({
       )}
 
       {/* Positions */}
-      {Object.keys(positions).length > 0 && (
+      {Object.keys(tradingStatus.positions).length > 0 && (
         <div className='bg-[#232a4d] p-6 rounded-lg'>
           <h3 className='text-xl font-bold mb-6'>Positions</h3>
-          {Object.entries(positions).map(([symbol, position]) => (
+          {Object.entries(tradingStatus.positions).map(([symbol, position]) => (
             <div
               key={symbol}
               className='border-b border-blue-800 last:border-0 py-4'>
