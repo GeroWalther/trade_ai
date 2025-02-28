@@ -49,7 +49,7 @@ const MarketOverview = () => {
     setActiveInstruments(activeInstruments.filter((i) => i !== instrument));
   };
 
-  if (!tradingStatus?.marketPrices || !tradingStatus?.account)
+  if (!tradingStatus?.market_prices || !tradingStatus?.account)
     return <div>Loading market data...</div>;
 
   const formatPrice = (price) => {
@@ -291,7 +291,7 @@ const MarketOverview = () => {
                 </span>
               </div>
               <p className='text-2xl font-bold mb-4'>
-                {formatPrice(tradingStatus.marketPrices?.[symbol]?.price)}
+                {formatPrice(tradingStatus.market_prices?.[symbol]?.price)}
               </p>
               <div className='grid grid-cols-2 gap-4'>
                 <button
