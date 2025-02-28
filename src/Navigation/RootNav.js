@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import MarketIntelligence from '../components/MarketIntelligence';
 import BotMonitor from '../components/BotMonitor';
 import MarketOverview from '../components/MarketOverview';
+import { AIAnalysis } from '../components/AIAlanysis';
 
 export const RootNav = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -38,6 +39,15 @@ export const RootNav = () => {
             }`}>
             Market Intelligence
           </button>
+          <button
+            onClick={() => setActiveTab('ai-analysis')}
+            className={`px-3 py-2 text-sm font-medium ${
+              activeTab === 'market-intelligence'
+                ? 'text-blue-500 border-b-2 border-blue-500'
+                : 'text-gray-400 hover:text-gray-300'
+            }`}>
+            AI Analysis
+          </button>
         </nav>
       </div>
 
@@ -51,7 +61,15 @@ export const RootNav = () => {
         ) : activeTab === 'market-intelligence' ? (
           // Market Intelligence Tab Content
           <MarketIntelligence />
-        ) : null}
+        ) : activeTab === 'ai-analysis' ? (
+          // AI Analysis Tab Content
+          <AIAnalysis />
+        ) : (
+          <div>
+            <h1>404</h1>
+            <p>Page not found</p>
+          </div>
+        )}
       </div>
     </div>
   );
