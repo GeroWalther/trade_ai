@@ -26,6 +26,17 @@ const MarketOverview = () => {
   const [tradingStatus, setTradingStatus] = useState(null);
   const [error, setError] = useState(null);
 
+  // New state for advanced trading modal
+  const [showAdvancedTradingModal, setShowAdvancedTradingModal] =
+    useState(false);
+  const [selectedSymbol, setSelectedSymbol] = useState(null);
+  const [tradeSide, setTradeSide] = useState('buy');
+  const [tradeQuantity, setTradeQuantity] = useState('');
+  const [orderType, setOrderType] = useState('market'); // 'market' or 'pending'
+  const [entryPrice, setEntryPrice] = useState('');
+  const [takeProfitPrice, setTakeProfitPrice] = useState('');
+  const [stopLossPrice, setStopLossPrice] = useState('');
+
   const fetchData = async () => {
     try {
       const data = await TradingService.getTradingStatus();
@@ -69,14 +80,29 @@ const MarketOverview = () => {
     return 1000; // Default for forex
   };
 
-  const handleTrade = async (symbol, side) => {
+  // Open the advanced trading modal
+  const openAdvancedTradingModal = (symbol, side) => {
+    setSelectedSymbol(symbol);
+    setTradeSide(side);
+    setTradeQuantity(getDefaultQuantity(symbol).toString());
+    setOrderType('market');
+    setEntryPrice('');
+    setTakeProfitPrice('');
+    setStopLossPrice('');
+
+    // Pre-fill entry price with current market price
+    const currentPrice = tradingStatus.market_prices?.[symbol]?.price;
+    if (currentPrice) {
+      setEntryPrice(currentPrice.toString());
+    }
+
+    setShowAdvancedTradingModal(true);
+  };
+
+  // Handle simple trade (quick buy/sell without advanced options)
+  const handleSimpleTrade = async (symbol, side) => {
     try {
-      const requestData = {
-        symbol: symbol,
-        side: side,
-        quantity: getDefaultQuantity(symbol),
-      };
-      console.log('Sending trade request:', requestData);
+      console.log(`Sending simple trade request: ${symbol} ${side}`);
 
       // Clear any previous errors
       setError(null);
@@ -87,14 +113,16 @@ const MarketOverview = () => {
         setActiveInstruments(updatedInstruments);
       }
 
-      const response = await axios.post(
-        `${config.api.tradingUrl}/execute-trade`,
-        requestData
+      const response = await TradingService.executeTrade(
+        symbol,
+        side,
+        getDefaultQuantity(symbol)
       );
-      console.log('Trade response:', response.data);
 
-      if (response.data.status === 'success') {
-        console.log(`Trade executed successfully: ${response.data.order_id}`);
+      console.log('Trade response:', response);
+
+      if (response.status === 'success') {
+        console.log(`Trade executed successfully: ${response.order_id}`);
         // Show success toast
         toast.success(
           `Trade executed successfully: ${symbol} ${side.toUpperCase()}`,
@@ -104,17 +132,17 @@ const MarketOverview = () => {
         );
         // Refresh data
         fetchData();
-      } else if (response.data.status === 'warning') {
+      } else if (response.status === 'warning') {
         // Handle warning (order processed but no position created)
-        console.warn(`Trade warning: ${response.data.message}`);
-        toast.warning(`Warning: ${response.data.message}`, {
+        console.warn(`Trade warning: ${response.message}`);
+        toast.warning(`Warning: ${response.message}`, {
           duration: 5000,
         });
         fetchData();
       } else {
         // This shouldn't happen as errors should throw exceptions
-        console.error('Trade failed:', response.data.message);
-        toast.error(`Error: ${response.data.message}`, {
+        console.error('Trade failed:', response.message);
+        toast.error(`Error: ${response.message}`, {
           duration: 5000,
         });
       }
@@ -124,17 +152,6 @@ const MarketOverview = () => {
         response: error.response?.data,
         status: error.response?.status,
       });
-
-      // // Display the error message from the server if available
-      // if (error.response?.data?.message) {
-      //   toast.error(`Error: ${error.response.data.message}`, {
-      //     duration: 5000,
-      //   });
-      // } else {
-      //   toast.error(`Error: ${error.message}`, {
-      //     duration: 5000,
-      //   });
-      // }
 
       // If the error is related to market being halted, show a more specific message
       if (error.response?.data?.error_code === 'MARKET_HALTED') {
@@ -148,23 +165,135 @@ const MarketOverview = () => {
     }
   };
 
+  // Handle advanced trade (with position size, pending orders, TP/SL)
+  const handleAdvancedTrade = async () => {
+    try {
+      // Validate inputs
+      if (!selectedSymbol || !tradeQuantity) {
+        toast.error('Symbol and quantity are required');
+        return;
+      }
+
+      // For pending orders, entry price is required
+      if (orderType === 'pending' && !entryPrice) {
+        toast.error('Entry price is required for pending orders');
+        return;
+      }
+
+      // Parse numeric values
+      const quantity = parseFloat(tradeQuantity);
+      const entry = orderType === 'pending' ? parseFloat(entryPrice) : null;
+      const takeProfit = takeProfitPrice ? parseFloat(takeProfitPrice) : null;
+      const stopLoss = stopLossPrice ? parseFloat(stopLossPrice) : null;
+
+      // Validate TP/SL based on trade direction
+      if (takeProfit && stopLoss) {
+        if (tradeSide === 'buy' && takeProfit <= stopLoss) {
+          toast.error(
+            'For buy orders, take profit must be higher than stop loss'
+          );
+          return;
+        }
+        if (tradeSide === 'sell' && takeProfit >= stopLoss) {
+          toast.error(
+            'For sell orders, take profit must be lower than stop loss'
+          );
+          return;
+        }
+      }
+
+      const options = {
+        orderType: orderType,
+        price: entry,
+        takeProfit: takeProfit,
+        stopLoss: stopLoss,
+      };
+
+      console.log(
+        `Sending advanced trade request: ${selectedSymbol} ${tradeSide} ${quantity}`,
+        options
+      );
+
+      // Clear any previous errors
+      setError(null);
+
+      const response = await TradingService.executeTrade(
+        selectedSymbol,
+        tradeSide,
+        quantity,
+        options
+      );
+
+      console.log('Trade response:', response);
+
+      if (response.status === 'success') {
+        console.log(`Trade executed successfully: ${response.order_id}`);
+        // Show success toast
+        toast.success(
+          `${
+            orderType === 'market' ? 'Trade' : 'Order'
+          } placed successfully: ${selectedSymbol} ${tradeSide.toUpperCase()}`,
+          {
+            duration: 5000,
+          }
+        );
+        // Close the modal
+        setShowAdvancedTradingModal(false);
+        // Refresh data
+        fetchData();
+      } else if (response.status === 'warning') {
+        // Handle warning (order processed but no position created)
+        console.warn(`Trade warning: ${response.message}`);
+        toast.warning(`Warning: ${response.message}`, {
+          duration: 5000,
+        });
+        setShowAdvancedTradingModal(false);
+        fetchData();
+      } else {
+        // This shouldn't happen as errors should throw exceptions
+        console.error('Trade failed:', response.message);
+        toast.error(`Error: ${response.message}`, {
+          duration: 5000,
+        });
+      }
+    } catch (error) {
+      console.error('Trade error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+
+      // If the error is related to market being halted, show a more specific message
+      if (error.response?.data?.error_code === 'MARKET_HALTED') {
+        toast.error(
+          `Market Closed: Trading for ${selectedSymbol} is currently unavailable. Please try again later or choose a different instrument.`,
+          {
+            duration: 5000,
+          }
+        );
+      } else {
+        toast.error(`Error: ${error.message || 'Unknown error occurred'}`, {
+          duration: 5000,
+        });
+      }
+    }
+  };
+
   const handleClosePosition = async (symbol) => {
     try {
       console.log(`Closing position for ${symbol}`);
-      const response = await axios.post(
-        `${config.api.tradingUrl}/close-position/${symbol}`
-      );
-      console.log('Close position response:', response.data);
+      const response = await TradingService.closePosition(symbol);
+      console.log('Close position response:', response);
 
-      if (response.data.status === 'success') {
-        console.log(`Position closed successfully: ${response.data.order_id}`);
+      if (response.status === 'success') {
+        console.log(`Position closed successfully: ${response.order_id}`);
         toast.success(`Position closed successfully: ${symbol}`, {
           duration: 5000,
         });
         fetchData();
       } else {
-        console.error('Failed to close position:', response.data.message);
-        toast.error(`Failed to close position: ${response.data.message}`, {
+        console.error('Failed to close position:', response.message);
+        toast.error(`Failed to close position: ${response.message}`, {
           duration: 5000,
         });
       }
@@ -175,58 +304,6 @@ const MarketOverview = () => {
       });
     }
   };
-
-  // const fetchAllPositions = async () => {
-  //   try {
-  //     const response = await axios.get(`${config.api.baseUrl}/api/positions`);
-  //     console.log('All open positions:', response.data);
-  //     if (response.data.status === 'success') {
-  //       const positions = response.data.positions;
-  //       console.log('Open positions:');
-  //       Object.entries(positions).forEach(([symbol, position]) => {
-  //         console.log(`
-  //           Symbol: ${symbol}
-  //           Side: ${position.side}
-  //           Quantity: ${position.quantity}
-  //           Entry: ${position.entry_price}
-  //           Current: ${position.current_price}
-  //           P/L: €${position.pl_euro.toFixed(2)} (${position.profit_pct.toFixed(
-  //           2
-  //         )}%)
-  //         `);
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.error('Error fetching positions:', error);
-  //   }
-  // };
-
-  // const PriceDisplay = ({ symbol, price, action }) => {
-  //   if (!price) return <div>N/A</div>;
-
-  //   const direction = action?.direction || 'neutral';
-  //   const change = action?.change_percent || 0;
-
-  //   return (
-  //     <div>
-  //       <p className='text-3xl font-bold mb-2'>{formatPrice(price)}</p>
-  //       <div
-  //         className={`text-sm ${
-  //           direction === 'up'
-  //             ? 'text-emerald-400'
-  //             : direction === 'down'
-  //             ? 'text-rose-400'
-  //             : 'text-blue-300'
-  //         }`}>
-  //         <span className='mr-2'>
-  //           {direction === 'up' ? '↑' : direction === 'down' ? '↓' : '→'}
-  //         </span>
-  //         {change > 0 ? '+' : ''}
-  //         {change}%
-  //       </div>
-  //     </div>
-  //   );
-  // };
 
   const getInstrumentType = (symbol) => {
     if (symbol.includes('BTC')) return 'CRYPTO';
@@ -341,17 +418,23 @@ const MarketOverview = () => {
               <p className='text-2xl font-bold mb-4'>
                 {formatPrice(tradingStatus.market_prices?.[symbol]?.price)}
               </p>
+
+              {/* Updated trading buttons with advanced options */}
               <div className='grid grid-cols-2 gap-4'>
-                <button
-                  onClick={() => handleTrade(symbol, 'buy')}
-                  className='bg-emerald-500 hover:bg-emerald-600 text-white py-2 px-4 rounded transition-colors'>
-                  Buy
-                </button>
-                <button
-                  onClick={() => handleTrade(symbol, 'sell')}
-                  className='bg-rose-500 hover:bg-rose-600 text-white py-2 px-4 rounded transition-colors'>
-                  Sell
-                </button>
+                <div className='space-y-2'>
+                  <button
+                    onClick={() => openAdvancedTradingModal(symbol, 'buy')}
+                    className='bg-emerald-500 hover:bg-emerald-600 text-white py-2 px-4 rounded transition-colors w-full'>
+                    Buy
+                  </button>
+                </div>
+                <div className='space-y-2'>
+                  <button
+                    onClick={() => openAdvancedTradingModal(symbol, 'sell')}
+                    className='bg-rose-500 hover:bg-rose-600 text-white py-2 px-4 rounded transition-colors w-full'>
+                    Sell
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -396,6 +479,172 @@ const MarketOverview = () => {
         </div>
       )}
 
+      {/* Advanced Trading Modal */}
+      {showAdvancedTradingModal && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+          <div className='bg-[#232a4d] p-6 rounded-lg w-[500px] max-w-full'>
+            <div className='flex justify-between items-center mb-4'>
+              <h3 className='text-lg font-bold'>
+                Advanced {tradeSide === 'buy' ? 'Buy' : 'Sell'} -{' '}
+                {selectedSymbol?.replace('_', '/')}
+              </h3>
+              <button
+                onClick={() => setShowAdvancedTradingModal(false)}
+                className='text-blue-300 hover:text-blue-200'>
+                ✕
+              </button>
+            </div>
+
+            <div className='space-y-4'>
+              {/* Position Size */}
+              <div>
+                <label className='block text-blue-300 mb-1'>
+                  Position Size
+                </label>
+                <input
+                  type='number'
+                  value={tradeQuantity}
+                  onChange={(e) => setTradeQuantity(e.target.value)}
+                  className='w-full bg-[#1a1f3c] text-white p-2 rounded'
+                  placeholder='Enter quantity'
+                  step={
+                    selectedSymbol?.includes('BTC')
+                      ? '0.01'
+                      : selectedSymbol?.includes('XAU')
+                      ? '0.1'
+                      : '1'
+                  }
+                />
+              </div>
+
+              {/* Order Type */}
+              <div>
+                <label className='block text-blue-300 mb-1'>Order Type</label>
+                <div className='grid grid-cols-2 gap-2'>
+                  <button
+                    onClick={() => setOrderType('market')}
+                    className={`py-2 px-4 rounded ${
+                      orderType === 'market'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-[#1a1f3c] text-blue-300'
+                    }`}>
+                    Market Order
+                  </button>
+                  <button
+                    onClick={() => setOrderType('pending')}
+                    className={`py-2 px-4 rounded ${
+                      orderType === 'pending'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-[#1a1f3c] text-blue-300'
+                    }`}>
+                    Pending Order
+                  </button>
+                </div>
+              </div>
+
+              {/* Entry Price (for pending orders) */}
+              {orderType === 'pending' && (
+                <div>
+                  <label className='block text-blue-300 mb-1'>
+                    Entry Price
+                  </label>
+                  <input
+                    type='number'
+                    value={entryPrice}
+                    onChange={(e) => setEntryPrice(e.target.value)}
+                    className='w-full bg-[#1a1f3c] text-white p-2 rounded'
+                    placeholder='Enter entry price'
+                    step='0.00001'
+                  />
+                  <div className='flex justify-between text-xs text-blue-400 mt-1'>
+                    <span>
+                      Current:{' '}
+                      {formatPrice(
+                        tradingStatus.market_prices?.[selectedSymbol]?.price
+                      )}
+                    </span>
+                    <button
+                      onClick={() =>
+                        setEntryPrice(
+                          tradingStatus.market_prices?.[
+                            selectedSymbol
+                          ]?.price?.toString() || ''
+                        )
+                      }
+                      className='text-blue-300 hover:text-blue-200'>
+                      Use Current
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Take Profit */}
+              <div>
+                <label className='block text-blue-300 mb-1'>
+                  Take Profit Price (Optional)
+                </label>
+                <input
+                  type='number'
+                  value={takeProfitPrice}
+                  onChange={(e) => setTakeProfitPrice(e.target.value)}
+                  className='w-full bg-[#1a1f3c] text-white p-2 rounded'
+                  placeholder='Enter take profit price'
+                  step='0.00001'
+                />
+                {tradeSide === 'buy' && (
+                  <div className='text-xs text-blue-400 mt-1'>
+                    Recommended: Above entry price
+                  </div>
+                )}
+                {tradeSide === 'sell' && (
+                  <div className='text-xs text-blue-400 mt-1'>
+                    Recommended: Below entry price
+                  </div>
+                )}
+              </div>
+
+              {/* Stop Loss */}
+              <div>
+                <label className='block text-blue-300 mb-1'>
+                  Stop Loss Price (Optional)
+                </label>
+                <input
+                  type='number'
+                  value={stopLossPrice}
+                  onChange={(e) => setStopLossPrice(e.target.value)}
+                  className='w-full bg-[#1a1f3c] text-white p-2 rounded'
+                  placeholder='Enter stop loss price'
+                  step='0.00001'
+                />
+                {tradeSide === 'buy' && (
+                  <div className='text-xs text-blue-400 mt-1'>
+                    Recommended: Below entry price
+                  </div>
+                )}
+                {tradeSide === 'sell' && (
+                  <div className='text-xs text-blue-400 mt-1'>
+                    Recommended: Above entry price
+                  </div>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <div className='pt-2'>
+                <button
+                  onClick={handleAdvancedTrade}
+                  className={`w-full py-3 px-4 rounded text-white ${
+                    tradeSide === 'buy'
+                      ? 'bg-emerald-500 hover:bg-emerald-600'
+                      : 'bg-rose-500 hover:bg-rose-600'
+                  }`}>
+                  {orderType === 'market' ? 'Execute Trade' : 'Place Order'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Positions */}
       {Object.keys(tradingStatus.positions).length > 0 && (
         <div className='bg-[#232a4d] p-6 rounded-lg'>
@@ -421,6 +670,16 @@ const MarketOverview = () => {
                     Quantity: {position.quantity} | Entry:{' '}
                     {formatPrice(position.entry_price)}
                   </p>
+                  {/* Display TP/SL if available */}
+                  {(position.take_profit || position.stop_loss) && (
+                    <p className='text-sm text-blue-300'>
+                      {position.take_profit &&
+                        `TP: ${formatPrice(position.take_profit)}`}
+                      {position.take_profit && position.stop_loss && ' | '}
+                      {position.stop_loss &&
+                        `SL: ${formatPrice(position.stop_loss)}`}
+                    </p>
+                  )}
                 </div>
                 <div className='text-right'>
                   <p
