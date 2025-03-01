@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import TradingService from '../services/trading_service';
 import { config } from '../config';
+import { toast } from 'sonner';
 
 const MarketOverview = () => {
-  const [availableInstruments, setAvailableInstruments] = useState([
+  const availableInstruments = [
     'EUR_USD',
     'GBP_USD',
     'USD_JPY',
@@ -15,7 +16,8 @@ const MarketOverview = () => {
     'NAS100_USD', // Nasdaq
     'XAU_USD', // Gold
     'BCO_USD', // Brent Crude Oil
-  ]);
+  ];
+
   const [activeInstruments, setActiveInstruments] = useState([
     'EUR_USD',
     'BTC_USD',
@@ -76,6 +78,15 @@ const MarketOverview = () => {
       };
       console.log('Sending trade request:', requestData);
 
+      // Clear any previous errors
+      setError(null);
+      const updatedInstruments = [...activeInstruments];
+      const symbolIndex = updatedInstruments.indexOf(symbol);
+      if (symbolIndex !== -1) {
+        // Set loading state for this instrument
+        setActiveInstruments(updatedInstruments);
+      }
+
       const response = await axios.post(
         `${config.api.tradingUrl}/execute-trade`,
         requestData
@@ -84,11 +95,28 @@ const MarketOverview = () => {
 
       if (response.data.status === 'success') {
         console.log(`Trade executed successfully: ${response.data.order_id}`);
-        if (tradingStatus.onTradeComplete) {
-          tradingStatus.onTradeComplete();
-        }
+        // Show success toast
+        toast.success(
+          `Trade executed successfully: ${symbol} ${side.toUpperCase()}`,
+          {
+            duration: 5000,
+          }
+        );
+        // Refresh data
+        fetchData();
+      } else if (response.data.status === 'warning') {
+        // Handle warning (order processed but no position created)
+        console.warn(`Trade warning: ${response.data.message}`);
+        toast.warning(`Warning: ${response.data.message}`, {
+          duration: 5000,
+        });
+        fetchData();
       } else {
+        // This shouldn't happen as errors should throw exceptions
         console.error('Trade failed:', response.data.message);
+        toast.error(`Error: ${response.data.message}`, {
+          duration: 5000,
+        });
       }
     } catch (error) {
       console.error('Trade error details:', {
@@ -96,6 +124,27 @@ const MarketOverview = () => {
         response: error.response?.data,
         status: error.response?.status,
       });
+
+      // // Display the error message from the server if available
+      // if (error.response?.data?.message) {
+      //   toast.error(`Error: ${error.response.data.message}`, {
+      //     duration: 5000,
+      //   });
+      // } else {
+      //   toast.error(`Error: ${error.message}`, {
+      //     duration: 5000,
+      //   });
+      // }
+
+      // If the error is related to market being halted, show a more specific message
+      if (error.response?.data?.error_code === 'MARKET_HALTED') {
+        toast.error(
+          `Market Closed: Trading for ${symbol} is currently unavailable. Please try again later or choose a different instrument.`,
+          {
+            duration: 5000,
+          }
+        );
+      }
     }
   };
 
@@ -109,11 +158,21 @@ const MarketOverview = () => {
 
       if (response.data.status === 'success') {
         console.log(`Position closed successfully: ${response.data.order_id}`);
+        toast.success(`Position closed successfully: ${symbol}`, {
+          duration: 5000,
+        });
+        fetchData();
       } else {
         console.error('Failed to close position:', response.data.message);
+        toast.error(`Failed to close position: ${response.data.message}`, {
+          duration: 5000,
+        });
       }
     } catch (error) {
       console.error('Error closing position:', error);
+      toast.error(`Error closing position: ${error.message}`, {
+        duration: 5000,
+      });
     }
   };
 
@@ -188,14 +247,6 @@ const MarketOverview = () => {
       )} (${position.profit_pct?.toFixed(2)}%)`,
     };
   };
-
-  if (error) {
-    return (
-      <div className='p-6 bg-rose-900 text-rose-200 rounded'>
-        Error: {error}
-      </div>
-    );
-  }
 
   if (!tradingStatus) {
     return (
