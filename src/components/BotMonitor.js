@@ -22,6 +22,23 @@ const BotParameters = React.memo(
       }
     }, [selectedBotStatus.parameters?.check_interval]);
 
+    // Check if this is an AI strategy
+    const isAIStrategy = selectedBot.includes('ai_');
+
+    // Trading term options for AI strategy
+    const termOptions = [
+      { value: 'Day trade', label: 'Day Trade (1-2 days)' },
+      { value: 'Swing trade', label: 'Swing Trade (1-2 weeks)' },
+      { value: 'Position trade', label: 'Position Trade (1-3 months)' },
+    ];
+
+    // Risk level options for AI strategy
+    const riskLevelOptions = [
+      { value: 'conservative', label: 'Conservative' },
+      { value: 'moderate', label: 'Moderate' },
+      { value: 'aggressive', label: 'Aggressive' },
+    ];
+
     return (
       <div className='bg-[#1a1f3c] p-4 rounded'>
         <h4 className='text-lg font-medium mb-4'>Parameters</h4>
@@ -142,6 +159,65 @@ const BotParameters = React.memo(
               max='5'
             />
           </div>
+
+          {/* AI Strategy Specific Parameters */}
+          {isAIStrategy && (
+            <>
+              {/* Trading Term Selector */}
+              <div className='flex items-center justify-between'>
+                <label className='text-sm text-blue-300'>Trading Term</label>
+                <select
+                  value={
+                    selectedBotStatus.parameters?.trading_term || 'Day trade'
+                  }
+                  onChange={(e) =>
+                    onUpdateParameters(selectedBot, {
+                      trading_term: e.target.value,
+                    })
+                  }
+                  className='bg-[#232a4d] px-2 py-1 rounded w-40 text-right'>
+                  {termOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Risk Level Selector */}
+              <div className='flex items-center justify-between'>
+                <label className='text-sm text-blue-300'>Risk Level</label>
+                <select
+                  value={
+                    selectedBotStatus.parameters?.risk_level || 'conservative'
+                  }
+                  onChange={(e) =>
+                    onUpdateParameters(selectedBot, {
+                      risk_level: e.target.value,
+                    })
+                  }
+                  className='bg-[#232a4d] px-2 py-1 rounded w-40 text-right'>
+                  {riskLevelOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className='mt-2 p-3 bg-blue-900/30 rounded text-xs text-blue-200'>
+                <p className='mb-2'>
+                  <span className='font-medium'>Note:</span> This AI-driven
+                  strategy automatically determines:
+                </p>
+                <ul className='list-disc ml-4 space-y-1'>
+                  <li>Optimal entry points based on AI analysis</li>
+                  <li>Take profit levels for maximizing gains</li>
+                  <li>Stop loss levels for risk management</li>
+                </ul>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
@@ -227,14 +303,14 @@ const BotStatus = ({ botId }) => {
         <h4 className='text-sm font-medium text-blue-300 mb-4'>
           Recent Updates
         </h4>
-        <div className='space-y-2 max-h-[600px] overflow-y-auto'>
+        <div className='space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar border border-blue-900/50 rounded p-3 bg-[#151b36]'>
           {status.recent_updates
             ?.slice()
             .reverse()
             .map((update, index) => (
               <div
                 key={index}
-                className='text-sm text-blue-200 whitespace-pre-wrap'>
+                className='text-sm text-blue-200 whitespace-pre-wrap border-b border-blue-900/30 pb-2 last:border-b-0'>
                 {update}
               </div>
             ))}
@@ -251,6 +327,9 @@ const BotMonitor = () => {
     continue_after_trade: true,
     max_concurrent_trades: 1,
     symbol: 'BTC_USD',
+    // AI strategy default parameters
+    trading_term: 'Day trade',
+    risk_level: 'conservative',
   };
 
   const [botsStatus, setBotsStatus] = useState({});
