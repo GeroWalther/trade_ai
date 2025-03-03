@@ -205,6 +205,49 @@ const BotParameters = React.memo(
                 </select>
               </div>
 
+              {/* Risk Percentage Selector */}
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-2'>
+                  <label className='text-sm text-blue-300'>
+                    Risk Per Trade
+                  </label>
+                  <div className='group relative'>
+                    <span className='cursor-help text-blue-400'>ⓘ</span>
+                    <div className='absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-xs text-blue-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none'>
+                      Percentage of account balance to risk per trade. Position
+                      size will be calculated based on the distance between
+                      entry price and stop loss.
+                      <br />
+                      <br />
+                      Recommended ranges:
+                      <ul className='list-disc ml-4 mt-1'>
+                        <li>Conservative: 0.5% - 1%</li>
+                        <li>Moderate: 1% - 2%</li>
+                        <li>Aggressive: 2% - 5%</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <div className='flex items-center gap-2'>
+                  <input
+                    type='number'
+                    value={selectedBotStatus.parameters?.risk_percent || 2}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value) || 0.5;
+                      const clampedValue = Math.min(10, Math.max(0.1, value));
+                      onUpdateParameters(selectedBot, {
+                        risk_percent: clampedValue,
+                      });
+                    }}
+                    className='bg-[#232a4d] px-2 py-1 rounded w-20 text-right [&::-webkit-inner-spin-button]:opacity-100 [&::-webkit-outer-spin-button]:opacity-100'
+                    min='0.1'
+                    max='10'
+                    step='0.1'
+                  />
+                  <span className='text-sm text-blue-300'>%</span>
+                </div>
+              </div>
+
               <div className='mt-2 p-3 bg-blue-900/30 rounded text-xs text-blue-200'>
                 <p className='mb-2'>
                   <span className='font-medium'>Note:</span> This AI-driven
@@ -214,6 +257,7 @@ const BotParameters = React.memo(
                   <li>Optimal entry points based on AI analysis</li>
                   <li>Take profit levels for maximizing gains</li>
                   <li>Stop loss levels for risk management</li>
+                  <li>Position sizing based on your risk percentage setting</li>
                 </ul>
               </div>
             </>
@@ -330,6 +374,7 @@ const BotMonitor = () => {
     // AI strategy default parameters
     trading_term: 'Day trade',
     risk_level: 'conservative',
+    risk_percent: 2, // Default to 2% risk per trade
   };
 
   const [botsStatus, setBotsStatus] = useState({});
