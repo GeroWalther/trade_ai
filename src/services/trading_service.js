@@ -37,10 +37,10 @@ class TradingService {
     }
   }
 
-  async closePosition(symbol) {
+  async closePosition(tradeId) {
     try {
       const response = await axios.post(
-        `${config.api.tradingUrl}/close-position/${symbol}`
+        `${config.api.tradingUrl}/close-position/${tradeId}`
       );
       return response.data;
     } catch (error) {
@@ -57,6 +57,23 @@ class TradingService {
       return response.data;
     } catch (error) {
       console.error('Order cancellation error:', error);
+      throw error;
+    }
+  }
+
+  async modifyPosition(tradeId, takeProfit, stopLoss) {
+    try {
+      const response = await axios.post(
+        `${config.api.tradingUrl}/modify-position`,
+        {
+          trade_id: tradeId,
+          take_profit: takeProfit,
+          stop_loss: stopLoss,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Position modification error:', error);
       throw error;
     }
   }

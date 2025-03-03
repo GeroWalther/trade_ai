@@ -37,6 +37,12 @@ const MarketOverview = () => {
   const [takeProfitPrice, setTakeProfitPrice] = useState('');
   const [stopLossPrice, setStopLossPrice] = useState('');
 
+  // Add new state variables for editing
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingPosition, setEditingPosition] = useState(null);
+  const [editTakeProfit, setEditTakeProfit] = useState('');
+  const [editStopLoss, setEditStopLoss] = useState('');
+
   const fetchData = async () => {
     try {
       const data = await TradingService.getTradingStatus();
@@ -279,15 +285,17 @@ const MarketOverview = () => {
     }
   };
 
-  const handleClosePosition = async (symbol) => {
+  const handleClosePosition = async (position) => {
     try {
-      console.log(`Closing position for ${symbol}`);
-      const response = await TradingService.closePosition(symbol);
+      console.log(
+        `Closing position for ${position.symbol} (ID: ${position.trade_id})`
+      );
+      const response = await TradingService.closePosition(position.trade_id);
       console.log('Close position response:', response);
 
       if (response.status === 'success') {
         console.log(`Position closed successfully: ${response.order_id}`);
-        toast.success(`Position closed successfully: ${symbol}`, {
+        toast.success(`Position closed successfully: ${position.symbol}`, {
           duration: 5000,
         });
         fetchData();
@@ -349,6 +357,42 @@ const MarketOverview = () => {
         duration: 5000,
       });
     }
+  };
+
+  // Add new function to handle position edits
+  const handleEditPosition = async () => {
+    try {
+      if (!editingPosition) return;
+
+      const response = await TradingService.modifyPosition(
+        editingPosition.trade_id,
+        editTakeProfit ? parseFloat(editTakeProfit) : null,
+        editStopLoss ? parseFloat(editStopLoss) : null
+      );
+
+      if (response.status === 'success') {
+        toast.success('Position updated successfully');
+        setIsEditModalOpen(false);
+        setEditingPosition(null);
+        setEditTakeProfit('');
+        setEditStopLoss('');
+        fetchData();
+      } else {
+        toast.error(`Failed to update position: ${response.message}`);
+        console.error('Failed to update position:', response.message);
+      }
+    } catch (error) {
+      toast.error(`Error updating position: ${error.message}`);
+      console.error('Error updating position:', error);
+    }
+  };
+
+  // Add function to open edit modal
+  const openEditModal = (position) => {
+    setEditingPosition(position);
+    setEditTakeProfit(position.take_profit || '');
+    setEditStopLoss(position.stop_loss || '');
+    setIsEditModalOpen(true);
   };
 
   if (!tradingStatus) {
@@ -696,33 +740,43 @@ const MarketOverview = () => {
                         ID: {position.trade_id}
                       </span>
                     </h4>
-                    <p className='text-sm text-blue-300'>
-                      Quantity: {position.quantity} | Entry:{' '}
-                      {formatPrice(position.entry_price)}
-                    </p>
-                    {/* Display TP/SL if available */}
-                    {(position.take_profit || position.stop_loss) && (
-                      <p className='text-sm text-blue-300'>
-                        {position.take_profit &&
-                          `TP: ${formatPrice(position.take_profit)}`}
-                        {position.take_profit && position.stop_loss && ' | '}
-                        {position.stop_loss &&
-                          `SL: ${formatPrice(position.stop_loss)}`}
-                      </p>
-                    )}
+                    <div className='text-sm text-gray-400 mt-1'>
+                      <span>Entry: {formatPrice(position.entry_price)}</span>
+                      <span className='ml-3'>
+                        Quantity: {Math.abs(position.quantity)}
+                      </span>
+                      {position.take_profit && (
+                        <span className='ml-3 text-emerald-400'>
+                          TP: {formatPrice(position.take_profit)}
+                        </span>
+                      )}
+                      {position.stop_loss && (
+                        <span className='ml-3 text-rose-400'>
+                          SL: {formatPrice(position.stop_loss)}
+                        </span>
+                      )}
+                    </div>
+                    <div className='text-sm mt-1'>
+                      <span
+                        className={
+                          position.pl_euro >= 0
+                            ? 'text-emerald-400'
+                            : 'text-rose-400'
+                        }>
+                        P/L: {formatCurrency(position.pl_euro)} (
+                        {position.profit_pct?.toFixed(2)}%)
+                      </span>
+                    </div>
                   </div>
-                  <div className='text-right'>
-                    <p
-                      className={`text-lg font-bold ${
-                        position.pl_euro >= 0
-                          ? 'text-emerald-400'
-                          : 'text-rose-400'
-                      }`}>
-                      {formatCurrency(position.pl_euro)}
-                    </p>
+                  <div className='flex items-center gap-3'>
                     <button
-                      onClick={() => handleClosePosition(position.symbol)}
-                      className='text-rose-400 hover:text-rose-300 text-sm'>
+                      onClick={() => openEditModal(position)}
+                      className='px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm transition-colors'>
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleClosePosition(position)}
+                      className='px-3 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white text-sm transition-colors'>
                       Close Position
                     </button>
                   </div>
@@ -781,6 +835,62 @@ const MarketOverview = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Edit Position Modal */}
+      {isEditModalOpen && editingPosition && (
+        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
+          <div className='bg-[#1a1f3c] p-6 rounded-lg w-96'>
+            <h3 className='text-xl font-bold mb-4'>
+              Edit {editingPosition.symbol.replace('_', '/')} Position
+            </h3>
+            <div className='space-y-4'>
+              <div>
+                <label className='block text-sm text-gray-400 mb-1'>
+                  Take Profit
+                </label>
+                <input
+                  type='number'
+                  value={editTakeProfit}
+                  onChange={(e) => setEditTakeProfit(e.target.value)}
+                  placeholder='Enter take profit price'
+                  className='w-full bg-[#232a4d] px-3 py-2 rounded text-white'
+                  step='0.00001'
+                />
+              </div>
+              <div>
+                <label className='block text-sm text-gray-400 mb-1'>
+                  Stop Loss
+                </label>
+                <input
+                  type='number'
+                  value={editStopLoss}
+                  onChange={(e) => setEditStopLoss(e.target.value)}
+                  placeholder='Enter stop loss price'
+                  className='w-full bg-[#232a4d] px-3 py-2 rounded text-white'
+                  step='0.00001'
+                />
+              </div>
+              <div className='flex justify-end gap-3 mt-6'>
+                <button
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setEditingPosition(null);
+                    setEditTakeProfit('');
+                    setEditStopLoss('');
+                  }}
+                  className='px-4 py-2 rounded bg-gray-600 hover:bg-gray-700 text-white transition-colors'>
+                  Cancel
+                </button>
+                <button
+                  onClick={handleEditPosition}
+                  className='px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white transition-colors'>
+                  Update Position
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
