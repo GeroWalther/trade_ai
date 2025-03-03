@@ -23,7 +23,8 @@ export const AIAnalysis = () => {
     { value: 'Nasdaq', label: 'Nasdaq (NAS100/USD)' },
     { value: 'S&P500', label: 'S&P 500 (SPX500/USD)' },
     { value: 'Gold', label: 'Gold (XAU/USD)' },
-    { value: 'USD/JPY', label: 'EUR/USD' },
+    { value: 'EUR/USD', label: 'EUR/USD' },
+    { value: 'USD/JPY', label: 'USD/JPY' },
     { value: 'BTCUSD', label: 'Bitcoin (BTC/USD)' },
   ];
 

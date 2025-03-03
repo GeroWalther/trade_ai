@@ -1,6 +1,6 @@
 export const config = {
   api: {
-    baseUrl: 'http://localhost:5003', // AI Analysis server
+    baseUrl: 'http://localhost:5005', // AI Analysis server
     tradingUrl: 'http://localhost:5002', // Trading server
     timeout: 30000, // Increased from 5000 to 30000 (30 seconds) for AI analysis
   },
