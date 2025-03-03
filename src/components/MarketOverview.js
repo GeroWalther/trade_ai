@@ -69,8 +69,10 @@ const MarketOverview = () => {
   };
 
   const formatPrice = (price) => {
-    if (!price || typeof price !== 'number') return 'N/A';
-    return price.toFixed(5);
+    if (price === undefined || price === null) return 'Not Set';
+    const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(numericPrice)) return 'Not Set';
+    return numericPrice.toFixed(5);
   };
 
   const formatCurrency = (amount) => {
@@ -323,6 +325,7 @@ const MarketOverview = () => {
 
   const formatPositionDetails = (position) => {
     const isLong = position.quantity > 0;
+
     return {
       ...position,
       side: isLong ? 'LONG' : 'SHORT',
@@ -330,6 +333,7 @@ const MarketOverview = () => {
       pl_formatted: `€${position.pl_euro?.toFixed(
         2
       )} (${position.profit_pct?.toFixed(2)}%)`,
+      // No need to modify takeProfitOrder and stopLossOrder as they're already in the position object
     };
   };
 
@@ -389,9 +393,10 @@ const MarketOverview = () => {
 
   // Add function to open edit modal
   const openEditModal = (position) => {
-    setEditingPosition(position);
-    setEditTakeProfit(position.take_profit || '');
-    setEditStopLoss(position.stop_loss || '');
+    const formattedPosition = formatPositionDetails(position);
+    setEditingPosition(formattedPosition);
+    setEditTakeProfit(formattedPosition.take_profit?.toString() || '');
+    setEditStopLoss(formattedPosition.stop_loss?.toString() || '');
     setIsEditModalOpen(true);
   };
 
@@ -402,7 +407,6 @@ const MarketOverview = () => {
       </div>
     );
   }
-
   return (
     <div className='space-y-6'>
       {/* Account Overview */}
@@ -740,23 +744,53 @@ const MarketOverview = () => {
                         ID: {position.trade_id}
                       </span>
                     </h4>
-                    <div className='text-sm text-gray-400 mt-1'>
-                      <span>Entry: {formatPrice(position.entry_price)}</span>
-                      <span className='ml-3'>
-                        Quantity: {Math.abs(position.quantity)}
-                      </span>
-                      {position.take_profit && (
-                        <span className='ml-3 text-emerald-400'>
-                          TP: {formatPrice(position.take_profit)}
+                    <div className='grid grid-cols-2 gap-x-6 gap-y-1 text-sm text-gray-400 mt-2'>
+                      <div className='flex justify-between'>
+                        <span>Entry:</span>
+                        <span className='text-white'>
+                          {formatPrice(position.entry_price)}
                         </span>
-                      )}
-                      {position.stop_loss && (
-                        <span className='ml-3 text-rose-400'>
-                          SL: {formatPrice(position.stop_loss)}
+                      </div>
+                      <div className='flex justify-between'>
+                        <span>Current:</span>
+                        <span className='text-white'>
+                          {formatPrice(position.current_price)}
                         </span>
-                      )}
+                      </div>
+                      <div className='flex justify-between'>
+                        <span>Quantity:</span>
+                        <span className='text-white'>
+                          {Math.abs(position.quantity)}
+                        </span>
+                      </div>
+                      <div className='flex justify-between'>
+                        <span>Take Profit:</span>
+                        <span className='text-emerald-400'>
+                          {(() => {
+                            const trade = tradingStatus.trades?.find(
+                              (t) => t.id === position.trade_id
+                            );
+                            return trade?.takeProfitOrder
+                              ? formatPrice(trade.takeProfitOrder.price)
+                              : 'Not Set';
+                          })()}
+                        </span>
+                      </div>
+                      <div className='flex justify-between'>
+                        <span>Stop Loss:</span>
+                        <span className='text-rose-400'>
+                          {(() => {
+                            const trade = tradingStatus.trades?.find(
+                              (t) => t.id === position.trade_id
+                            );
+                            return trade?.stopLossOrder
+                              ? formatPrice(trade.stopLossOrder.price)
+                              : 'Not Set';
+                          })()}
+                        </span>
+                      </div>
                     </div>
-                    <div className='text-sm mt-1'>
+                    <div className='text-sm mt-2'>
                       <span
                         className={
                           position.pl_euro >= 0
@@ -846,6 +880,26 @@ const MarketOverview = () => {
               Edit {editingPosition.symbol.replace('_', '/')} Position
             </h3>
             <div className='space-y-4'>
+              {/* Current Price Display */}
+              <div className='bg-[#232a4d] p-3 rounded'>
+                <div className='flex justify-between items-center'>
+                  <span className='text-sm text-gray-400'>Current Price:</span>
+                  <span className='text-lg font-bold'>
+                    {formatPrice(
+                      tradingStatus.market_prices?.[editingPosition.symbol]
+                        ?.price
+                    )}
+                  </span>
+                </div>
+                <div className='flex justify-between items-center mt-2'>
+                  <span className='text-sm text-gray-400'>Entry Price:</span>
+                  <span className='text-lg'>
+                    {formatPrice(editingPosition.entry_price)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Take Profit */}
               <div>
                 <label className='block text-sm text-gray-400 mb-1'>
                   Take Profit
@@ -858,7 +912,19 @@ const MarketOverview = () => {
                   className='w-full bg-[#232a4d] px-3 py-2 rounded text-white'
                   step='0.00001'
                 />
+                {editingPosition.side === 'LONG' && (
+                  <div className='text-xs text-blue-400 mt-1'>
+                    Recommended: Above entry price
+                  </div>
+                )}
+                {editingPosition.side === 'SHORT' && (
+                  <div className='text-xs text-blue-400 mt-1'>
+                    Recommended: Below entry price
+                  </div>
+                )}
               </div>
+
+              {/* Stop Loss */}
               <div>
                 <label className='block text-sm text-gray-400 mb-1'>
                   Stop Loss
@@ -871,7 +937,18 @@ const MarketOverview = () => {
                   className='w-full bg-[#232a4d] px-3 py-2 rounded text-white'
                   step='0.00001'
                 />
+                {editingPosition.side === 'LONG' && (
+                  <div className='text-xs text-blue-400 mt-1'>
+                    Recommended: Below entry price
+                  </div>
+                )}
+                {editingPosition.side === 'SHORT' && (
+                  <div className='text-xs text-blue-400 mt-1'>
+                    Recommended: Above entry price
+                  </div>
+                )}
               </div>
+
               <div className='flex justify-end gap-3 mt-6'>
                 <button
                   onClick={() => {
