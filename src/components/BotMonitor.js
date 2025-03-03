@@ -390,6 +390,14 @@ const BotStatus = ({ botId }) => {
     return () => clearInterval(interval);
   }, [botId]);
 
+  const handleClearLogs = async () => {
+    try {
+      await axios.post(`${config.api.tradingUrl}/api/bots/${botId}/clear-logs`);
+    } catch (error) {
+      console.error('Error clearing logs:', error);
+    }
+  };
+
   if (!status) return null;
 
   return (
@@ -399,9 +407,25 @@ const BotStatus = ({ botId }) => {
         dailyPL={status.performance?.total_profit_loss || 0}
       />
       <div className='bg-[#1a1f3c] p-4 rounded'>
-        <h4 className='text-sm font-medium text-blue-300 mb-4'>
-          Recent Updates
-        </h4>
+        <div className='flex justify-between items-center mb-4'>
+          <h4 className='text-sm font-medium text-blue-300'>Recent Updates</h4>
+          <button
+            onClick={handleClearLogs}
+            className='px-2 py-1 text-xs bg-blue-800 hover:bg-blue-700 text-blue-200 rounded flex items-center gap-1'>
+            <span>Clear Logs</span>
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              className='h-3 w-3'
+              viewBox='0 0 20 20'
+              fill='currentColor'>
+              <path
+                fillRule='evenodd'
+                d='M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z'
+                clipRule='evenodd'
+              />
+            </svg>
+          </button>
+        </div>
         <div className='space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar border border-blue-900/50 rounded p-3 bg-[#151b36]'>
           {status.recent_updates
             ?.slice()
