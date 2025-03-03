@@ -393,10 +393,20 @@ const MarketOverview = () => {
 
   // Add function to open edit modal
   const openEditModal = (position) => {
+    // Find the trade with matching ID to get take profit and stop loss
+    const trade = tradingStatus.trades?.find((t) => t.id === position.trade_id);
+
+    // Format the position
     const formattedPosition = formatPositionDetails(position);
+
+    // Set the editing position
     setEditingPosition(formattedPosition);
-    setEditTakeProfit(formattedPosition.take_profit?.toString() || '');
-    setEditStopLoss(formattedPosition.stop_loss?.toString() || '');
+
+    // Set take profit and stop loss from the trade if available
+    setEditTakeProfit(trade?.takeProfitOrder?.price?.toString() || '');
+    setEditStopLoss(trade?.stopLossOrder?.price?.toString() || '');
+
+    // Open the modal
     setIsEditModalOpen(true);
   };
 
@@ -764,7 +774,7 @@ const MarketOverview = () => {
                         </span>
                       </div>
                       <div className='flex justify-between'>
-                        <span>Take Profit:</span>
+                        <span className='mr-2'>Take Profit: </span>
                         <span className='text-emerald-400'>
                           {(() => {
                             const trade = tradingStatus.trades?.find(
@@ -903,6 +913,11 @@ const MarketOverview = () => {
               <div>
                 <label className='block text-sm text-gray-400 mb-1'>
                   Take Profit
+                  {editTakeProfit && (
+                    <span className='ml-2 text-emerald-400'>
+                      (Current: {formatPrice(parseFloat(editTakeProfit))})
+                    </span>
+                  )}
                 </label>
                 <input
                   type='number'
@@ -928,6 +943,11 @@ const MarketOverview = () => {
               <div>
                 <label className='block text-sm text-gray-400 mb-1'>
                   Stop Loss
+                  {editStopLoss && (
+                    <span className='ml-2 text-rose-400'>
+                      (Current: {formatPrice(parseFloat(editStopLoss))})
+                    </span>
+                  )}
                 </label>
                 <input
                   type='number'
