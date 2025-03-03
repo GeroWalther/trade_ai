@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import axios from 'axios';
 import TradingService from '../services/trading_service';
 import { config } from '../config';
@@ -526,208 +527,234 @@ const MarketOverview = () => {
       </div>
 
       {/* Manage Pairs Modal */}
-      {showPositionsModal && (
-        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
-          <div className='bg-[#232a4d] p-6 rounded-lg w-96'>
-            <div className='flex justify-between items-center mb-4'>
-              <h3 className='text-lg font-bold'>Manage Trading Pairs</h3>
-              <button
-                onClick={() => setShowPositionsModal(false)}
-                className='text-blue-300 hover:text-blue-200'>
-                ✕
-              </button>
+      {showPositionsModal &&
+        ReactDOM.createPortal(
+          <div
+            className='fixed inset-0 bg-black/50 flex items-center justify-center'
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 9999,
+            }}>
+            <div
+              className='bg-[#232a4d] p-6 rounded-lg w-96 relative'
+              style={{ zIndex: 10000 }}>
+              <div className='flex justify-between items-center mb-4'>
+                <h3 className='text-lg font-bold'>Manage Trading Pairs</h3>
+                <button
+                  onClick={() => setShowPositionsModal(false)}
+                  className='text-blue-300 hover:text-blue-200'>
+                  ✕
+                </button>
+              </div>
+              <div className='space-y-2 max-h-96 overflow-y-auto'>
+                {availableInstruments.map((instrument) => (
+                  <div
+                    key={instrument}
+                    className='flex justify-between items-center p-2 hover:bg-[#1a1f3c] rounded'>
+                    <span>{instrument.replace('_', '/')}</span>
+                    {activeInstruments.includes(instrument) ? (
+                      <button
+                        onClick={() => removeInstrument(instrument)}
+                        className='text-rose-400 hover:text-rose-300 px-2 py-1 rounded'>
+                        Remove
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => addInstrument(instrument)}
+                        className='text-emerald-400 hover:text-emerald-300 px-2 py-1 rounded'>
+                        Add
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className='space-y-2 max-h-96 overflow-y-auto'>
-              {availableInstruments.map((instrument) => (
-                <div
-                  key={instrument}
-                  className='flex justify-between items-center p-2 hover:bg-[#1a1f3c] rounded'>
-                  <span>{instrument.replace('_', '/')}</span>
-                  {activeInstruments.includes(instrument) ? (
-                    <button
-                      onClick={() => removeInstrument(instrument)}
-                      className='text-rose-400 hover:text-rose-300 px-2 py-1 rounded'>
-                      Remove
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => addInstrument(instrument)}
-                      className='text-emerald-400 hover:text-emerald-300 px-2 py-1 rounded'>
-                      Add
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* Advanced Trading Modal */}
-      {showAdvancedTradingModal && (
-        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
-          <div className='bg-[#232a4d] p-6 rounded-lg w-[500px] max-w-full'>
-            <div className='flex justify-between items-center mb-4'>
-              <h3 className='text-lg font-bold'>
-                Advanced {tradeSide === 'buy' ? 'Buy' : 'Sell'} -{' '}
-                {selectedSymbol?.replace('_', '/')}
-              </h3>
-              <button
-                onClick={() => setShowAdvancedTradingModal(false)}
-                className='text-blue-300 hover:text-blue-200'>
-                ✕
-              </button>
-            </div>
-
-            <div className='space-y-4'>
-              {/* Position Size */}
-              <div>
-                <label className='block text-blue-300 mb-1'>
-                  Position Size
-                </label>
-                <input
-                  type='number'
-                  value={tradeQuantity}
-                  onChange={(e) => setTradeQuantity(e.target.value)}
-                  className='w-full bg-[#1a1f3c] text-white p-2 rounded'
-                  placeholder='Enter quantity'
-                  step={
-                    selectedSymbol?.includes('BTC')
-                      ? '0.01'
-                      : selectedSymbol?.includes('XAU')
-                      ? '0.1'
-                      : '1'
-                  }
-                />
+      {showAdvancedTradingModal &&
+        ReactDOM.createPortal(
+          <div
+            className='fixed inset-0 bg-black/50 flex items-center justify-center'
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 9999,
+            }}>
+            <div
+              className='bg-[#232a4d] p-6 rounded-lg w-[500px] max-w-full relative'
+              style={{ zIndex: 10000 }}>
+              <div className='flex justify-between items-center mb-4'>
+                <h3 className='text-lg font-bold'>
+                  Advanced {tradeSide === 'buy' ? 'Buy' : 'Sell'} -{' '}
+                  {selectedSymbol?.replace('_', '/')}
+                </h3>
+                <button
+                  onClick={() => setShowAdvancedTradingModal(false)}
+                  className='text-blue-300 hover:text-blue-200'>
+                  ✕
+                </button>
               </div>
 
-              {/* Order Type */}
-              <div>
-                <label className='block text-blue-300 mb-1'>Order Type</label>
-                <div className='grid grid-cols-2 gap-2'>
-                  <button
-                    onClick={() => setOrderType('market')}
-                    className={`py-2 px-4 rounded ${
-                      orderType === 'market'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-[#1a1f3c] text-blue-300'
-                    }`}>
-                    Market Order
-                  </button>
-                  <button
-                    onClick={() => setOrderType('pending')}
-                    className={`py-2 px-4 rounded ${
-                      orderType === 'pending'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-[#1a1f3c] text-blue-300'
-                    }`}>
-                    Pending Order
-                  </button>
-                </div>
-              </div>
-
-              {/* Entry Price (for pending orders) */}
-              {orderType === 'pending' && (
+              <div className='space-y-4'>
+                {/* Position Size */}
                 <div>
                   <label className='block text-blue-300 mb-1'>
-                    Entry Price
+                    Position Size
                   </label>
                   <input
                     type='number'
-                    value={entryPrice}
-                    onChange={(e) => setEntryPrice(e.target.value)}
+                    value={tradeQuantity}
+                    onChange={(e) => setTradeQuantity(e.target.value)}
                     className='w-full bg-[#1a1f3c] text-white p-2 rounded'
-                    placeholder='Enter entry price'
-                    step='0.00001'
+                    placeholder='Enter quantity'
+                    step={
+                      selectedSymbol?.includes('BTC')
+                        ? '0.01'
+                        : selectedSymbol?.includes('XAU')
+                        ? '0.1'
+                        : '1'
+                    }
                   />
-                  <div className='flex justify-between text-xs text-blue-400 mt-1'>
-                    <span>
-                      Current:{' '}
-                      {formatPrice(
-                        tradingStatus.market_prices?.[selectedSymbol]?.price
-                      )}
-                    </span>
+                </div>
+
+                {/* Order Type */}
+                <div>
+                  <label className='block text-blue-300 mb-1'>Order Type</label>
+                  <div className='grid grid-cols-2 gap-2'>
                     <button
-                      onClick={() =>
-                        setEntryPrice(
-                          tradingStatus.market_prices?.[
-                            selectedSymbol
-                          ]?.price?.toString() || ''
-                        )
-                      }
-                      className='text-blue-300 hover:text-blue-200'>
-                      Use Current
+                      onClick={() => setOrderType('market')}
+                      className={`py-2 px-4 rounded ${
+                        orderType === 'market'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-[#1a1f3c] text-blue-300'
+                      }`}>
+                      Market Order
+                    </button>
+                    <button
+                      onClick={() => setOrderType('pending')}
+                      className={`py-2 px-4 rounded ${
+                        orderType === 'pending'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-[#1a1f3c] text-blue-300'
+                      }`}>
+                      Pending Order
                     </button>
                   </div>
                 </div>
-              )}
 
-              {/* Take Profit */}
-              <div>
-                <label className='block text-blue-300 mb-1'>
-                  Take Profit Price (Optional)
-                </label>
-                <input
-                  type='number'
-                  value={takeProfitPrice}
-                  onChange={(e) => setTakeProfitPrice(e.target.value)}
-                  className='w-full bg-[#1a1f3c] text-white p-2 rounded'
-                  placeholder='Enter take profit price'
-                  step='0.00001'
-                />
-                {tradeSide === 'buy' && (
-                  <div className='text-xs text-blue-400 mt-1'>
-                    Recommended: Above entry price
+                {/* Entry Price (for pending orders) */}
+                {orderType === 'pending' && (
+                  <div>
+                    <label className='block text-blue-300 mb-1'>
+                      Entry Price
+                    </label>
+                    <input
+                      type='number'
+                      value={entryPrice}
+                      onChange={(e) => setEntryPrice(e.target.value)}
+                      className='w-full bg-[#1a1f3c] text-white p-2 rounded'
+                      placeholder='Enter entry price'
+                      step='0.00001'
+                    />
+                    <div className='flex justify-between text-xs text-blue-400 mt-1'>
+                      <span>
+                        Current:{' '}
+                        {formatPrice(
+                          tradingStatus.market_prices?.[selectedSymbol]?.price
+                        )}
+                      </span>
+                      <button
+                        onClick={() =>
+                          setEntryPrice(
+                            tradingStatus.market_prices?.[
+                              selectedSymbol
+                            ]?.price?.toString() || ''
+                          )
+                        }
+                        className='text-blue-300 hover:text-blue-200'>
+                        Use Current
+                      </button>
+                    </div>
                   </div>
                 )}
-                {tradeSide === 'sell' && (
-                  <div className='text-xs text-blue-400 mt-1'>
-                    Recommended: Below entry price
-                  </div>
-                )}
-              </div>
 
-              {/* Stop Loss */}
-              <div>
-                <label className='block text-blue-300 mb-1'>
-                  Stop Loss Price (Optional)
-                </label>
-                <input
-                  type='number'
-                  value={stopLossPrice}
-                  onChange={(e) => setStopLossPrice(e.target.value)}
-                  className='w-full bg-[#1a1f3c] text-white p-2 rounded'
-                  placeholder='Enter stop loss price'
-                  step='0.00001'
-                />
-                {tradeSide === 'buy' && (
-                  <div className='text-xs text-blue-400 mt-1'>
-                    Recommended: Below entry price
-                  </div>
-                )}
-                {tradeSide === 'sell' && (
-                  <div className='text-xs text-blue-400 mt-1'>
-                    Recommended: Above entry price
-                  </div>
-                )}
-              </div>
+                {/* Take Profit */}
+                <div>
+                  <label className='block text-blue-300 mb-1'>
+                    Take Profit Price (Optional)
+                  </label>
+                  <input
+                    type='number'
+                    value={takeProfitPrice}
+                    onChange={(e) => setTakeProfitPrice(e.target.value)}
+                    className='w-full bg-[#1a1f3c] text-white p-2 rounded'
+                    placeholder='Enter take profit price'
+                    step='0.00001'
+                  />
+                  {tradeSide === 'buy' && (
+                    <div className='text-xs text-blue-400 mt-1'>
+                      Recommended: Above entry price
+                    </div>
+                  )}
+                  {tradeSide === 'sell' && (
+                    <div className='text-xs text-blue-400 mt-1'>
+                      Recommended: Below entry price
+                    </div>
+                  )}
+                </div>
 
-              {/* Submit Button */}
-              <div className='pt-2'>
-                <button
-                  onClick={handleAdvancedTrade}
-                  className={`w-full py-3 px-4 rounded text-white ${
-                    tradeSide === 'buy'
-                      ? 'bg-emerald-500 hover:bg-emerald-600'
-                      : 'bg-rose-500 hover:bg-rose-600'
-                  }`}>
-                  {orderType === 'market' ? 'Execute Trade' : 'Place Order'}
-                </button>
+                {/* Stop Loss */}
+                <div>
+                  <label className='block text-blue-300 mb-1'>
+                    Stop Loss Price (Optional)
+                  </label>
+                  <input
+                    type='number'
+                    value={stopLossPrice}
+                    onChange={(e) => setStopLossPrice(e.target.value)}
+                    className='w-full bg-[#1a1f3c] text-white p-2 rounded'
+                    placeholder='Enter stop loss price'
+                    step='0.00001'
+                  />
+                  {tradeSide === 'buy' && (
+                    <div className='text-xs text-blue-400 mt-1'>
+                      Recommended: Below entry price
+                    </div>
+                  )}
+                  {tradeSide === 'sell' && (
+                    <div className='text-xs text-blue-400 mt-1'>
+                      Recommended: Above entry price
+                    </div>
+                  )}
+                </div>
+
+                {/* Submit Button */}
+                <div className='pt-2'>
+                  <button
+                    onClick={handleAdvancedTrade}
+                    className={`w-full py-3 px-4 rounded text-white ${
+                      tradeSide === 'buy'
+                        ? 'bg-emerald-500 hover:bg-emerald-600'
+                        : 'bg-rose-500 hover:bg-rose-600'
+                    }`}>
+                    {orderType === 'market' ? 'Execute Trade' : 'Place Order'}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* Positions */}
       {Object.keys(tradingStatus.positions).length > 0 && (
@@ -883,113 +910,129 @@ const MarketOverview = () => {
       )}
 
       {/* Edit Position Modal */}
-      {isEditModalOpen && editingPosition && (
-        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
-          <div className='bg-[#1a1f3c] p-6 rounded-lg w-96'>
-            <h3 className='text-xl font-bold mb-4'>
-              Edit {editingPosition.symbol.replace('_', '/')} Position
-            </h3>
-            <div className='space-y-4'>
-              {/* Current Price Display */}
-              <div className='bg-[#232a4d] p-3 rounded'>
-                <div className='flex justify-between items-center'>
-                  <span className='text-sm text-gray-400'>Current Price:</span>
-                  <span className='text-lg font-bold'>
-                    {formatPrice(
-                      tradingStatus.market_prices?.[editingPosition.symbol]
-                        ?.price
+      {isEditModalOpen &&
+        editingPosition &&
+        ReactDOM.createPortal(
+          <div
+            className='fixed inset-0 bg-black/50 flex items-center justify-center'
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 9999,
+            }}>
+            <div
+              className='bg-[#1a1f3c] p-6 rounded-lg w-96 relative'
+              style={{ zIndex: 10000 }}>
+              <h3 className='text-xl font-bold mb-4'>
+                Edit {editingPosition.symbol.replace('_', '/')} Position
+              </h3>
+              <div className='space-y-4'>
+                {/* Current Price Display */}
+                <div className='bg-[#232a4d] p-3 rounded'>
+                  <div className='flex justify-between items-center'>
+                    <span className='text-sm text-gray-400'>
+                      Current Price:
+                    </span>
+                    <span className='text-lg font-bold'>
+                      {formatPrice(
+                        tradingStatus.market_prices?.[editingPosition.symbol]
+                          ?.price
+                      )}
+                    </span>
+                  </div>
+                  <div className='flex justify-between items-center mt-2'>
+                    <span className='text-sm text-gray-400'>Entry Price:</span>
+                    <span className='text-lg'>
+                      {formatPrice(editingPosition.entry_price)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Take Profit */}
+                <div>
+                  <label className='block text-sm text-gray-400 mb-1'>
+                    Take Profit
+                    {editTakeProfit && (
+                      <span className='ml-2 text-emerald-400'>
+                        (Current: {formatPrice(parseFloat(editTakeProfit))})
+                      </span>
                     )}
-                  </span>
-                </div>
-                <div className='flex justify-between items-center mt-2'>
-                  <span className='text-sm text-gray-400'>Entry Price:</span>
-                  <span className='text-lg'>
-                    {formatPrice(editingPosition.entry_price)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Take Profit */}
-              <div>
-                <label className='block text-sm text-gray-400 mb-1'>
-                  Take Profit
-                  {editTakeProfit && (
-                    <span className='ml-2 text-emerald-400'>
-                      (Current: {formatPrice(parseFloat(editTakeProfit))})
-                    </span>
+                  </label>
+                  <input
+                    type='number'
+                    value={editTakeProfit}
+                    onChange={(e) => setEditTakeProfit(e.target.value)}
+                    placeholder='Enter take profit price'
+                    className='w-full bg-[#232a4d] px-3 py-2 rounded text-white'
+                    step='0.00001'
+                  />
+                  {editingPosition.side === 'LONG' && (
+                    <div className='text-xs text-blue-400 mt-1'>
+                      Recommended: Above entry price
+                    </div>
                   )}
-                </label>
-                <input
-                  type='number'
-                  value={editTakeProfit}
-                  onChange={(e) => setEditTakeProfit(e.target.value)}
-                  placeholder='Enter take profit price'
-                  className='w-full bg-[#232a4d] px-3 py-2 rounded text-white'
-                  step='0.00001'
-                />
-                {editingPosition.side === 'LONG' && (
-                  <div className='text-xs text-blue-400 mt-1'>
-                    Recommended: Above entry price
-                  </div>
-                )}
-                {editingPosition.side === 'SHORT' && (
-                  <div className='text-xs text-blue-400 mt-1'>
-                    Recommended: Below entry price
-                  </div>
-                )}
-              </div>
-
-              {/* Stop Loss */}
-              <div>
-                <label className='block text-sm text-gray-400 mb-1'>
-                  Stop Loss
-                  {editStopLoss && (
-                    <span className='ml-2 text-rose-400'>
-                      (Current: {formatPrice(parseFloat(editStopLoss))})
-                    </span>
+                  {editingPosition.side === 'SHORT' && (
+                    <div className='text-xs text-blue-400 mt-1'>
+                      Recommended: Below entry price
+                    </div>
                   )}
-                </label>
-                <input
-                  type='number'
-                  value={editStopLoss}
-                  onChange={(e) => setEditStopLoss(e.target.value)}
-                  placeholder='Enter stop loss price'
-                  className='w-full bg-[#232a4d] px-3 py-2 rounded text-white'
-                  step='0.00001'
-                />
-                {editingPosition.side === 'LONG' && (
-                  <div className='text-xs text-blue-400 mt-1'>
-                    Recommended: Below entry price
-                  </div>
-                )}
-                {editingPosition.side === 'SHORT' && (
-                  <div className='text-xs text-blue-400 mt-1'>
-                    Recommended: Above entry price
-                  </div>
-                )}
-              </div>
+                </div>
 
-              <div className='flex justify-end gap-3 mt-6'>
-                <button
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setEditingPosition(null);
-                    setEditTakeProfit('');
-                    setEditStopLoss('');
-                  }}
-                  className='px-4 py-2 rounded bg-gray-600 hover:bg-gray-700 text-white transition-colors'>
-                  Cancel
-                </button>
-                <button
-                  onClick={handleEditPosition}
-                  className='px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white transition-colors'>
-                  Update Position
-                </button>
+                {/* Stop Loss */}
+                <div>
+                  <label className='block text-sm text-gray-400 mb-1'>
+                    Stop Loss
+                    {editStopLoss && (
+                      <span className='ml-2 text-rose-400'>
+                        (Current: {formatPrice(parseFloat(editStopLoss))})
+                      </span>
+                    )}
+                  </label>
+                  <input
+                    type='number'
+                    value={editStopLoss}
+                    onChange={(e) => setEditStopLoss(e.target.value)}
+                    placeholder='Enter stop loss price'
+                    className='w-full bg-[#232a4d] px-3 py-2 rounded text-white'
+                    step='0.00001'
+                  />
+                  {editingPosition.side === 'LONG' && (
+                    <div className='text-xs text-blue-400 mt-1'>
+                      Recommended: Below entry price
+                    </div>
+                  )}
+                  {editingPosition.side === 'SHORT' && (
+                    <div className='text-xs text-blue-400 mt-1'>
+                      Recommended: Above entry price
+                    </div>
+                  )}
+                </div>
+
+                <div className='flex justify-end gap-3 mt-6'>
+                  <button
+                    onClick={() => {
+                      setIsEditModalOpen(false);
+                      setEditingPosition(null);
+                      setEditTakeProfit('');
+                      setEditStopLoss('');
+                    }}
+                    className='px-4 py-2 rounded bg-gray-600 hover:bg-gray-700 text-white transition-colors'>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleEditPosition}
+                    className='px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white transition-colors'>
+                    Update Position
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
