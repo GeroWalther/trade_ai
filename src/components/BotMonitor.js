@@ -39,9 +39,36 @@ const BotParameters = React.memo(
       { value: 'aggressive', label: 'Aggressive' },
     ];
 
+    // Check if the bot is running
+    const isBotRunning = selectedBotStatus.running;
+
     return (
       <div className='bg-[#1a1f3c] p-4 rounded'>
         <h4 className='text-lg font-medium mb-4'>Parameters</h4>
+
+        {/* Warning message when bot is running */}
+        {isBotRunning && (
+          <div className='mb-4 p-2 bg-amber-900/50 border border-amber-700/50 rounded text-amber-200 text-sm'>
+            <div className='flex items-center gap-2'>
+              <svg
+                xmlns='http://www.w3.org/2000/svg'
+                className='h-5 w-5'
+                viewBox='0 0 20 20'
+                fill='currentColor'>
+                <path
+                  fillRule='evenodd'
+                  d='M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z'
+                  clipRule='evenodd'
+                />
+              </svg>
+              <span>
+                Parameters cannot be changed while the bot is running. Stop the
+                bot to make changes.
+              </span>
+            </div>
+          </div>
+        )}
+
         <div className='space-y-4'>
           {/* Trading Symbol */}
           <div className='flex items-center justify-between'>
@@ -49,7 +76,10 @@ const BotParameters = React.memo(
             <select
               value={selectedBotStatus.parameters.symbol}
               onChange={(e) => onUpdateSymbol(selectedBot, e.target.value)}
-              className='bg-[#232a4d] px-2 py-1 rounded w-40 text-right'>
+              className={`bg-[#232a4d] px-2 py-1 rounded w-40 text-right ${
+                isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              disabled={isBotRunning}>
               {selectedBotStatus.status?.available_instruments?.map(
                 (symbol) => (
                   <option key={symbol} value={symbol}>
@@ -85,19 +115,24 @@ const BotParameters = React.memo(
                 type='number'
                 value={checkIntervalInput}
                 onChange={(e) => {
+                  if (isBotRunning) return;
                   const value = parseInt(e.target.value) || 1;
                   const clampedValue = Math.min(10080, Math.max(1, value));
                   setCheckIntervalInput(clampedValue);
                 }}
                 onBlur={() => {
+                  if (isBotRunning) return;
                   onUpdateParameters(selectedBot, {
                     check_interval: checkIntervalInput * 60,
                   });
                 }}
-                className='bg-[#232a4d] px-2 py-1 rounded w-24 text-right [&::-webkit-inner-spin-button]:opacity-100 [&::-webkit-outer-spin-button]:opacity-100'
+                className={`bg-[#232a4d] px-2 py-1 rounded w-24 text-right [&::-webkit-inner-spin-button]:opacity-100 [&::-webkit-outer-spin-button]:opacity-100 ${
+                  isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
                 min='1'
                 max='10080'
                 step='1'
+                disabled={isBotRunning}
               />
               <span className='text-sm text-blue-300'>minutes</span>
             </div>
@@ -121,12 +156,16 @@ const BotParameters = React.memo(
                   selectedBotStatus.parameters?.continue_after_trade ??
                   defaultParameters.continue_after_trade
                 }
-                onChange={(e) =>
+                onChange={(e) => {
+                  if (isBotRunning) return;
                   onUpdateParameters(selectedBot, {
                     continue_after_trade: e.target.checked,
-                  })
-                }
-                className='bg-[#232a4d] rounded w-4 h-4 checked:bg-blue-500 hover:cursor-pointer'
+                  });
+                }}
+                className={`bg-[#232a4d] rounded w-4 h-4 checked:bg-blue-500 hover:cursor-pointer ${
+                  isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                disabled={isBotRunning}
               />
             </div>
           </div>
@@ -142,7 +181,8 @@ const BotParameters = React.memo(
                 selectedBotStatus.parameters?.max_concurrent_trades ||
                 defaultParameters.max_concurrent_trades
               }
-              onChange={(e) =>
+              onChange={(e) => {
+                if (isBotRunning) return;
                 onUpdateParameters(selectedBot, {
                   max_concurrent_trades: Math.max(
                     1,
@@ -152,11 +192,14 @@ const BotParameters = React.memo(
                         defaultParameters.max_concurrent_trades
                     )
                   ),
-                })
-              }
-              className='bg-[#232a4d] px-2 py-1 rounded w-24 text-right'
+                });
+              }}
+              className={`bg-[#232a4d] px-2 py-1 rounded w-24 text-right ${
+                isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
               min='1'
               max='5'
+              disabled={isBotRunning}
             />
           </div>
 
@@ -170,12 +213,16 @@ const BotParameters = React.memo(
                   value={
                     selectedBotStatus.parameters?.trading_term || 'Day trade'
                   }
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    if (isBotRunning) return;
                     onUpdateParameters(selectedBot, {
                       trading_term: e.target.value,
-                    })
-                  }
-                  className='bg-[#232a4d] px-2 py-1 rounded w-40 text-right'>
+                    });
+                  }}
+                  className={`bg-[#232a4d] px-2 py-1 rounded w-40 text-right ${
+                    isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  disabled={isBotRunning}>
                   {termOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -191,12 +238,16 @@ const BotParameters = React.memo(
                   value={
                     selectedBotStatus.parameters?.risk_level || 'conservative'
                   }
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    if (isBotRunning) return;
                     onUpdateParameters(selectedBot, {
                       risk_level: e.target.value,
-                    })
-                  }
-                  className='bg-[#232a4d] px-2 py-1 rounded w-40 text-right'>
+                    });
+                  }}
+                  className={`bg-[#232a4d] px-2 py-1 rounded w-40 text-right ${
+                    isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  disabled={isBotRunning}>
                   {riskLevelOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -233,16 +284,20 @@ const BotParameters = React.memo(
                     type='number'
                     value={selectedBotStatus.parameters?.risk_percent || 2}
                     onChange={(e) => {
+                      if (isBotRunning) return;
                       const value = parseFloat(e.target.value) || 0.5;
                       const clampedValue = Math.min(10, Math.max(0.1, value));
                       onUpdateParameters(selectedBot, {
                         risk_percent: clampedValue,
                       });
                     }}
-                    className='bg-[#232a4d] px-2 py-1 rounded w-20 text-right [&::-webkit-inner-spin-button]:opacity-100 [&::-webkit-outer-spin-button]:opacity-100'
+                    className={`bg-[#232a4d] px-2 py-1 rounded w-20 text-right [&::-webkit-inner-spin-button]:opacity-100 [&::-webkit-outer-spin-button]:opacity-100 ${
+                      isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                     min='0.1'
                     max='10'
                     step='0.1'
+                    disabled={isBotRunning}
                   />
                   <span className='text-sm text-blue-300'>%</span>
                 </div>
@@ -436,15 +491,36 @@ const BotMonitor = () => {
   const handleUpdateSymbol = useCallback(
     async (botId, symbol) => {
       try {
-        await axios.put(
+        const response = await axios.put(
           `${config.api.tradingUrl}/api/bots/${botId}/parameters`,
           {
             symbol: symbol,
           }
         );
-        fetchBots(); // Use fetchBots instead of fetchBotsStatus
+
+        if (response.data.status === 'success') {
+          fetchBots(); // Use fetchBots instead of fetchBotsStatus
+        }
       } catch (err) {
-        setError(err.message);
+        // Check if this is the "bot is running" error
+        if (
+          err.response &&
+          err.response.data &&
+          err.response.data.message &&
+          err.response.data.message.includes(
+            'Cannot change parameters while the bot is running'
+          )
+        ) {
+          // Show a more user-friendly error message
+          setError(
+            'Cannot change symbol while the bot is running. Please stop the bot first.'
+          );
+        } else {
+          setError(err.message);
+        }
+
+        // Refresh the bot status to ensure UI is in sync with server state
+        fetchBots();
       }
     },
     [fetchBots]
@@ -465,7 +541,29 @@ const BotMonitor = () => {
             fetchBots(); // Use fetchBots instead of fetchBotsStatus
           }
         })
-        .catch((error) => console.error('Error updating parameters:', error));
+        .catch((error) => {
+          // Check if this is the "bot is running" error
+          if (
+            error.response &&
+            error.response.data &&
+            error.response.data.message &&
+            error.response.data.message.includes(
+              'Cannot change parameters while the bot is running'
+            )
+          ) {
+            // Show a more user-friendly error message
+            setError(
+              'Cannot change parameters while the bot is running. Please stop the bot first.'
+            );
+          } else {
+            setError(error.message);
+          }
+
+          // Refresh the bot status to ensure UI is in sync with server state
+          fetchBots();
+
+          console.error('Error updating parameters:', error);
+        });
     },
     [selectedBotStatus.parameters, defaultParameters, fetchBots] // Add fetchBots to dependencies
   );
