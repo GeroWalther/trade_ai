@@ -48,6 +48,18 @@ class TradingService {
       throw error;
     }
   }
+
+  async cancelOrder(orderId) {
+    try {
+      const response = await axios.post(
+        `${config.api.tradingUrl}/cancel-order/${orderId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Order cancellation error:', error);
+      throw error;
+    }
+  }
 }
 
 export default new TradingService();

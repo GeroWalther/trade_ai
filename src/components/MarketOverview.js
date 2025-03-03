@@ -325,6 +325,32 @@ const MarketOverview = () => {
     };
   };
 
+  const handleCancelOrder = async (orderId) => {
+    try {
+      console.log(`Canceling order: ${orderId}`);
+      const response = await TradingService.cancelOrder(orderId);
+      console.log('Cancel order response:', response);
+
+      if (response.status === 'success') {
+        console.log(`Order canceled successfully`);
+        toast.success(`Order canceled successfully`, {
+          duration: 5000,
+        });
+        fetchData();
+      } else {
+        console.error('Failed to cancel order:', response.message);
+        toast.error(`Failed to cancel order: ${response.message}`, {
+          duration: 5000,
+        });
+      }
+    } catch (error) {
+      console.error('Error canceling order:', error);
+      toast.error(`Error canceling order: ${error.message}`, {
+        duration: 5000,
+      });
+    }
+  };
+
   if (!tradingStatus) {
     return (
       <div className='flex items-center justify-center h-screen bg-blue-950 text-blue-200'>
@@ -648,7 +674,7 @@ const MarketOverview = () => {
       {/* Positions */}
       {Object.keys(tradingStatus.positions).length > 0 && (
         <div className='bg-[#232a4d] p-6 rounded-lg'>
-          <h3 className='text-xl font-bold mb-6'>Positions</h3>
+          <h3 className='text-xl font-bold mb-6'>Open Positions</h3>
           {Object.entries(tradingStatus.positions).map(([symbol, position]) => (
             <div
               key={symbol}
@@ -694,6 +720,57 @@ const MarketOverview = () => {
                     onClick={() => handleClosePosition(symbol)}
                     className='text-rose-400 hover:text-rose-300 text-sm'>
                     Close Position
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Pending Orders */}
+      {tradingStatus.pending_orders?.length > 0 && (
+        <div className='bg-[#232a4d] p-6 rounded-lg'>
+          <h3 className='text-xl font-bold mb-6'>Pending Orders</h3>
+          {tradingStatus.pending_orders.map((order) => (
+            <div
+              key={order.id}
+              className='border-b border-blue-800 last:border-0 py-4'>
+              <div className='flex justify-between items-center'>
+                <div>
+                  <h4 className='text-lg font-medium flex items-center gap-2'>
+                    {order.symbol.replace('_', '/')}
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs ${
+                        order.side === 'buy'
+                          ? 'bg-emerald-900 text-emerald-200'
+                          : 'bg-rose-900 text-rose-200'
+                      }`}>
+                      {order.side.toUpperCase()}
+                    </span>
+                  </h4>
+                  <p className='text-sm text-blue-300'>
+                    Quantity: {order.quantity} | Entry:{' '}
+                    {formatPrice(order.price)}
+                  </p>
+                  {/* Display TP/SL if available */}
+                  {(order.take_profit || order.stop_loss) && (
+                    <p className='text-sm text-blue-300'>
+                      {order.take_profit &&
+                        `TP: ${formatPrice(order.take_profit)}`}
+                      {order.take_profit && order.stop_loss && ' | '}
+                      {order.stop_loss && `SL: ${formatPrice(order.stop_loss)}`}
+                    </p>
+                  )}
+                  <p className='text-xs text-gray-400 mt-1'>
+                    Created: {new Date(order.created_time).toLocaleString()}
+                  </p>
+                </div>
+                <div className='text-right'>
+                  <button
+                    onClick={() => handleCancelOrder(order.id)}
+                    className='text-rose-400 hover:text-rose-300 text-sm'>
+                    Cancel Order
                   </button>
                 </div>
               </div>
