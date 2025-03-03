@@ -675,56 +675,61 @@ const MarketOverview = () => {
       {Object.keys(tradingStatus.positions).length > 0 && (
         <div className='bg-[#232a4d] p-6 rounded-lg'>
           <h3 className='text-xl font-bold mb-6'>Open Positions</h3>
-          {Object.entries(tradingStatus.positions).map(([symbol, position]) => (
-            <div
-              key={symbol}
-              className='border-b border-blue-800 last:border-0 py-4'>
-              <div className='flex justify-between items-center'>
-                <div>
-                  <h4 className='text-lg font-medium flex items-center gap-2'>
-                    {symbol.replace('_', '/')}
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        position.side === 'LONG'
-                          ? 'bg-emerald-900 text-emerald-200'
-                          : 'bg-rose-900 text-rose-200'
-                      }`}>
-                      {position.side}
-                    </span>
-                  </h4>
-                  <p className='text-sm text-blue-300'>
-                    Quantity: {position.quantity} | Entry:{' '}
-                    {formatPrice(position.entry_price)}
-                  </p>
-                  {/* Display TP/SL if available */}
-                  {(position.take_profit || position.stop_loss) && (
+          {Object.entries(tradingStatus.positions).map(
+            ([positionKey, position]) => (
+              <div
+                key={positionKey}
+                className='border-b border-blue-800 last:border-0 py-4'>
+                <div className='flex justify-between items-center'>
+                  <div>
+                    <h4 className='text-lg font-medium flex items-center gap-2'>
+                      {position.symbol.replace('_', '/')}
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          position.side === 'LONG'
+                            ? 'bg-emerald-900 text-emerald-200'
+                            : 'bg-rose-900 text-rose-200'
+                        }`}>
+                        {position.side}
+                      </span>
+                      <span className='text-xs text-blue-400'>
+                        ID: {position.trade_id}
+                      </span>
+                    </h4>
                     <p className='text-sm text-blue-300'>
-                      {position.take_profit &&
-                        `TP: ${formatPrice(position.take_profit)}`}
-                      {position.take_profit && position.stop_loss && ' | '}
-                      {position.stop_loss &&
-                        `SL: ${formatPrice(position.stop_loss)}`}
+                      Quantity: {position.quantity} | Entry:{' '}
+                      {formatPrice(position.entry_price)}
                     </p>
-                  )}
-                </div>
-                <div className='text-right'>
-                  <p
-                    className={`text-lg font-bold ${
-                      position.pl_euro >= 0
-                        ? 'text-emerald-400'
-                        : 'text-rose-400'
-                    }`}>
-                    {formatCurrency(position.pl_euro)}
-                  </p>
-                  <button
-                    onClick={() => handleClosePosition(symbol)}
-                    className='text-rose-400 hover:text-rose-300 text-sm'>
-                    Close Position
-                  </button>
+                    {/* Display TP/SL if available */}
+                    {(position.take_profit || position.stop_loss) && (
+                      <p className='text-sm text-blue-300'>
+                        {position.take_profit &&
+                          `TP: ${formatPrice(position.take_profit)}`}
+                        {position.take_profit && position.stop_loss && ' | '}
+                        {position.stop_loss &&
+                          `SL: ${formatPrice(position.stop_loss)}`}
+                      </p>
+                    )}
+                  </div>
+                  <div className='text-right'>
+                    <p
+                      className={`text-lg font-bold ${
+                        position.pl_euro >= 0
+                          ? 'text-emerald-400'
+                          : 'text-rose-400'
+                      }`}>
+                      {formatCurrency(position.pl_euro)}
+                    </p>
+                    <button
+                      onClick={() => handleClosePosition(position.symbol)}
+                      className='text-rose-400 hover:text-rose-300 text-sm'>
+                      Close Position
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          )}
         </div>
       )}
 
