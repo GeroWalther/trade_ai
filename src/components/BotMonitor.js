@@ -425,6 +425,7 @@ const BotParameters = React.memo(
   }
 );
 
+/* Comment out the BotPerformance component
 const BotPerformance = React.memo(({ performance, dailyPL }) => {
   if (!performance) return null;
 
@@ -455,6 +456,7 @@ const BotPerformance = React.memo(({ performance, dailyPL }) => {
     </div>
   );
 });
+*/
 
 const RecentUpdates = React.memo(({ updates }) => {
   return (
@@ -504,10 +506,12 @@ const BotStatus = ({ botId }) => {
 
   return (
     <>
+      {/* Comment out the BotPerformance component usage
       <BotPerformance
         performance={status.performance}
         dailyPL={status.performance?.total_profit_loss || 0}
       />
+      */}
       <div className='bg-[#1a1f3c] p-4 rounded'>
         <div className='flex justify-between items-center mb-4'>
           <h4 className='text-sm font-medium text-blue-300'>Recent Updates</h4>
