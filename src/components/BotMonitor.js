@@ -170,6 +170,49 @@ const BotParameters = React.memo(
             </div>
           </div>
 
+          {/* Trailing Stop Loss */}
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-2'>
+              <label className='text-sm text-blue-300'>
+                Trailing Stop Loss
+              </label>
+              <div className='group relative'>
+                <span className='cursor-help text-blue-400'>ⓘ</span>
+                <div className='absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-xs text-blue-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none'>
+                  When enabled, the stop loss will automatically adjust to lock
+                  in profits as the price moves in your favor. The stop loss
+                  will maintain the initial risk distance but will never move
+                  against your position.
+                </div>
+              </div>
+            </div>
+            <div className='flex items-center gap-2'>
+              <span className='text-sm text-blue-300'>
+                {selectedBotStatus.parameters?.trailing_stop_loss ??
+                defaultParameters.trailing_stop_loss
+                  ? 'Enabled'
+                  : 'Disabled'}
+              </span>
+              <input
+                type='checkbox'
+                checked={
+                  selectedBotStatus.parameters?.trailing_stop_loss ??
+                  defaultParameters.trailing_stop_loss
+                }
+                onChange={(e) => {
+                  if (isBotRunning) return;
+                  onUpdateParameters(selectedBot, {
+                    trailing_stop_loss: e.target.checked,
+                  });
+                }}
+                className={`bg-[#232a4d] rounded w-4 h-4 checked:bg-blue-500 hover:cursor-pointer ${
+                  isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                disabled={isBotRunning}
+              />
+            </div>
+          </div>
+
           {/* Max Concurrent Trades */}
           <div className='flex items-center justify-between'>
             <label className='text-sm text-blue-300'>
@@ -454,6 +497,7 @@ const BotMonitor = () => {
     trading_term: 'Day trade',
     risk_level: 'conservative',
     risk_percent: 2, // Default to 2% risk per trade
+    trailing_stop_loss: false, // Default trailing stop loss to disabled
   };
 
   const [botsStatus, setBotsStatus] = useState({});
