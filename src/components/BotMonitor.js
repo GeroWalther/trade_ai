@@ -246,6 +246,108 @@ const BotParameters = React.memo(
             />
           </div>
 
+          {/* Risk Percent Per Trade - For both EMA and AI strategies */}
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-2'>
+              <label className='text-sm text-blue-300'>Risk Per Trade</label>
+              <div className='group relative'>
+                <span className='cursor-help text-blue-400'>ⓘ</span>
+                <div className='absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-xs text-blue-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none'>
+                  {selectedBot === 'ema_strategy'
+                    ? `The percentage of your account balance to risk on each trade. 
+                    Position size is calculated based on the distance between entry price and the 50 EMA (which serves as the stop loss).
+                    Lower values (0.5-1%) are recommended for safer trading.`
+                    : `The percentage of your account balance to risk on each trade.
+                    This determines position size based on the distance to your
+                    stop loss. Lower values (1-2%) are more conservative, higher
+                    values (3-5%) are more aggressive.`}
+                </div>
+              </div>
+            </div>
+            <div className='flex items-center gap-2'>
+              <input
+                type='number'
+                value={
+                  selectedBotStatus.parameters?.risk_percent ||
+                  defaultParameters.risk_percent
+                }
+                onChange={(e) => {
+                  if (isBotRunning) return;
+                  const value =
+                    parseFloat(e.target.value) ||
+                    defaultParameters.risk_percent;
+                  onUpdateParameters(selectedBot, {
+                    risk_percent: Math.max(0.1, Math.min(10, value)),
+                  });
+                }}
+                className={`bg-[#232a4d] px-2 py-1 rounded w-24 text-right ${
+                  isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                min='0.1'
+                max='10'
+                step='0.1'
+                disabled={isBotRunning}
+              />
+              <span className='text-sm text-blue-300'>%</span>
+            </div>
+          </div>
+
+          {/* Take Profit Level - For EMA strategy */}
+          {selectedBot === 'ema_strategy' && (
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center gap-2'>
+                <label className='text-sm text-blue-300'>
+                  Take Profit Level
+                </label>
+                <div className='group relative'>
+                  <span className='cursor-help text-blue-400'>ⓘ</span>
+                  <div className='absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-xs text-blue-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none'>
+                    The percentage distance from entry price to take profit
+                    level. While the stop loss is placed at the 50 EMA, the take
+                    profit is set at this fixed percentage from entry. Higher
+                    values mean larger potential profits but may reduce win
+                    rate. Recommended: 2-6% for most markets, 4-8% for more
+                    volatile markets like crypto.
+                  </div>
+                </div>
+              </div>
+              <div className='flex items-center gap-2'>
+                <input
+                  type='number'
+                  value={
+                    selectedBotStatus.parameters?.take_profit_level !==
+                    undefined
+                      ? (typeof selectedBotStatus.parameters
+                          .take_profit_level === 'number'
+                          ? selectedBotStatus.parameters.take_profit_level
+                          : parseFloat(
+                              selectedBotStatus.parameters.take_profit_level
+                            )) * 100
+                      : defaultParameters.take_profit_level * 100
+                  }
+                  onChange={(e) => {
+                    if (isBotRunning) return;
+                    const value =
+                      parseFloat(e.target.value) ||
+                      defaultParameters.take_profit_level * 100;
+                    onUpdateParameters(selectedBot, {
+                      take_profit_level:
+                        Math.max(0.5, Math.min(20, value)) / 100,
+                    });
+                  }}
+                  className={`bg-[#232a4d] px-2 py-1 rounded w-24 text-right ${
+                    isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  min='0.5'
+                  max='20'
+                  step='0.5'
+                  disabled={isBotRunning}
+                />
+                <span className='text-sm text-blue-300'>%</span>
+              </div>
+            </div>
+          )}
+
           {/* AI Strategy Specific Parameters */}
           {isAIStrategy && (
             <>
@@ -254,7 +356,9 @@ const BotParameters = React.memo(
                 <label className='text-sm text-blue-300'>Trading Term</label>
                 <select
                   value={
-                    selectedBotStatus.parameters?.trading_term || 'Day trade'
+                    selectedBotStatus.parameters?.trading_term ||
+                    defaultParameters.trading_term ||
+                    'Day trade'
                   }
                   onChange={(e) => {
                     if (isBotRunning) return;
@@ -262,7 +366,7 @@ const BotParameters = React.memo(
                       trading_term: e.target.value,
                     });
                   }}
-                  className={`bg-[#232a4d] px-2 py-1 rounded w-40 text-right ${
+                  className={`bg-[#232a4d] px-2 py-1 rounded w-40 ${
                     isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                   disabled={isBotRunning}>
@@ -279,7 +383,9 @@ const BotParameters = React.memo(
                 <label className='text-sm text-blue-300'>Risk Level</label>
                 <select
                   value={
-                    selectedBotStatus.parameters?.risk_level || 'conservative'
+                    selectedBotStatus.parameters?.risk_level ||
+                    defaultParameters.risk_level ||
+                    'moderate'
                   }
                   onChange={(e) => {
                     if (isBotRunning) return;
@@ -287,7 +393,7 @@ const BotParameters = React.memo(
                       risk_level: e.target.value,
                     });
                   }}
-                  className={`bg-[#232a4d] px-2 py-1 rounded w-40 text-right ${
+                  className={`bg-[#232a4d] px-2 py-1 rounded w-40 ${
                     isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                   disabled={isBotRunning}>
@@ -297,53 +403,6 @@ const BotParameters = React.memo(
                     </option>
                   ))}
                 </select>
-              </div>
-
-              {/* Risk Percentage Selector */}
-              <div className='flex items-center justify-between'>
-                <div className='flex items-center gap-2'>
-                  <label className='text-sm text-blue-300'>
-                    Risk Per Trade
-                  </label>
-                  <div className='group relative'>
-                    <span className='cursor-help text-blue-400'>ⓘ</span>
-                    <div className='absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-xs text-blue-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none'>
-                      Percentage of account balance to risk per trade. Position
-                      size will be calculated based on the distance between
-                      entry price and stop loss.
-                      <br />
-                      <br />
-                      Recommended ranges:
-                      <ul className='list-disc ml-4 mt-1'>
-                        <li>Conservative: 0.5% - 1%</li>
-                        <li>Moderate: 1% - 2%</li>
-                        <li>Aggressive: 2% - 5%</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                <div className='flex items-center gap-2'>
-                  <input
-                    type='number'
-                    value={selectedBotStatus.parameters?.risk_percent || 2}
-                    onChange={(e) => {
-                      if (isBotRunning) return;
-                      const value = parseFloat(e.target.value) || 0.5;
-                      const clampedValue = Math.min(10, Math.max(0.1, value));
-                      onUpdateParameters(selectedBot, {
-                        risk_percent: clampedValue,
-                      });
-                    }}
-                    className={`bg-[#232a4d] px-2 py-1 rounded w-20 text-right [&::-webkit-inner-spin-button]:opacity-100 [&::-webkit-outer-spin-button]:opacity-100 ${
-                      isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                    min='0.1'
-                    max='10'
-                    step='0.1'
-                    disabled={isBotRunning}
-                  />
-                  <span className='text-sm text-blue-300'>%</span>
-                </div>
               </div>
 
               <div className='mt-2 p-3 bg-blue-900/30 rounded text-xs text-blue-200'>
@@ -496,8 +555,9 @@ const BotMonitor = () => {
     // AI strategy default parameters
     trading_term: 'Day trade',
     risk_level: 'conservative',
-    risk_percent: 2, // Default to 2% risk per trade
+    risk_percent: 0.5, // Default to 0.5% risk per trade
     trailing_stop_loss: false, // Default trailing stop loss to disabled
+    take_profit_level: 0.04, // Default take profit level (4%)
   };
 
   const [botsStatus, setBotsStatus] = useState({});
@@ -546,15 +606,26 @@ const BotMonitor = () => {
         await axios.post(`${config.api.tradingUrl}/api/bots/${botId}/toggle`, {
           action: currentStatus ? 'stop' : 'start',
         });
-        fetchBots(); // Use fetchBots instead of fetchBotsStatus
+
+        // Poll for status updates more frequently after toggling
+        fetchBots(); // Immediate fetch
+
+        // If stopping the bot, poll a few more times to ensure UI reflects the stopped state
+        if (currentStatus) {
+          // Poll 3 more times with a 1-second delay between polls
+          setTimeout(() => fetchBots(), 1000);
+          setTimeout(() => fetchBots(), 2000);
+          setTimeout(() => fetchBots(), 3000);
+        }
       } catch (err) {
+        console.error('Error toggling bot:', err);
         setError(err.message);
       } finally {
         setLoading(false);
       }
     },
     [botsStatus, fetchBots]
-  ); // Add fetchBots to dependencies
+  );
 
   const handleUpdateSymbol = useCallback(
     async (botId, symbol) => {
