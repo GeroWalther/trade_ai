@@ -1,29 +1,23 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { config } from '../config';
 
 const BotParameters = React.memo(
-  ({
-    selectedBot,
-    selectedBotStatus,
-    defaultParameters,
-    onUpdateParameters,
-    onUpdateSymbol,
-  }) => {
+  ({ botId, parameters, onUpdate, availableInstruments, isBotRunning }) => {
     const [checkIntervalInput, setCheckIntervalInput] = useState(
-      Math.round(defaultParameters.check_interval / 60)
+      parameters?.check_interval
+        ? Math.round(parameters.check_interval / 60)
+        : 30
     );
 
     useEffect(() => {
-      if (selectedBotStatus.parameters?.check_interval) {
-        setCheckIntervalInput(
-          Math.round(selectedBotStatus.parameters.check_interval / 60)
-        );
+      if (parameters?.check_interval) {
+        setCheckIntervalInput(Math.round(parameters.check_interval / 60));
       }
-    }, [selectedBotStatus.parameters?.check_interval]);
+    }, [parameters?.check_interval]);
 
     // Check if this is an AI strategy
-    const isAIStrategy = selectedBot.includes('ai_');
+    const isAIStrategy = botId.includes('ai_');
 
     // Trading term options for AI strategy
     const termOptions = [
@@ -39,8 +33,18 @@ const BotParameters = React.memo(
       { value: 'aggressive', label: 'Aggressive' },
     ];
 
-    // Check if the bot is running
-    const isBotRunning = selectedBotStatus.running;
+    const handleUpdateParameters = async (paramName, value) => {
+      try {
+        const updateData = { [paramName]: value };
+        await axios.put(
+          `${config.api.tradingUrl}/api/bots/${botId}/parameters`,
+          updateData
+        );
+        onUpdate(); // Refresh the bot status after update
+      } catch (err) {
+        console.error('Error updating parameters:', err);
+      }
+    };
 
     return (
       <div className='bg-[#1a1f3c] p-4 rounded'>
@@ -48,47 +52,37 @@ const BotParameters = React.memo(
 
         {/* Warning message when bot is running */}
         {isBotRunning && (
-          <div className='mb-4 p-2 bg-amber-900/50 border border-amber-700/50 rounded text-amber-200 text-sm'>
-            <div className='flex items-center gap-2'>
-              <svg
-                xmlns='http://www.w3.org/2000/svg'
-                className='h-5 w-5'
-                viewBox='0 0 20 20'
-                fill='currentColor'>
-                <path
-                  fillRule='evenodd'
-                  d='M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z'
-                  clipRule='evenodd'
-                />
-              </svg>
-              <span>
-                Parameters cannot be changed while the bot is running. Stop the
-                bot to make changes.
-              </span>
-            </div>
+          <div className='bg-yellow-900/30 border border-yellow-700 text-yellow-200 p-3 rounded mb-4 text-sm'>
+            <p>
+              <span className='font-bold'>⚠️ Note:</span> Parameters cannot be
+              changed while the bot is running. Stop the bot first to modify all
+              settings.
+            </p>
           </div>
         )}
 
         <div className='space-y-4'>
-          {/* Trading Symbol */}
-          <div className='flex items-center justify-between'>
-            <label className='text-sm text-blue-300'>Trading Symbol</label>
-            <select
-              value={selectedBotStatus.parameters.symbol}
-              onChange={(e) => onUpdateSymbol(selectedBot, e.target.value)}
-              className={`bg-[#232a4d] px-2 py-1 rounded w-40 text-right ${
-                isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-              disabled={isBotRunning}>
-              {selectedBotStatus.status?.available_instruments?.map(
-                (symbol) => (
+          {/* Trading Symbol - Only for non-AI strategies */}
+          {!isAIStrategy && (
+            <div className='flex items-center justify-between'>
+              <label className='text-sm text-blue-300'>Trading Symbol</label>
+              <select
+                value={parameters?.symbol}
+                onChange={(e) =>
+                  handleUpdateParameters('symbol', e.target.value)
+                }
+                className={`bg-[#232a4d] px-2 py-1 rounded w-40 text-right ${
+                  isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                disabled={isBotRunning}>
+                {availableInstruments.map((symbol) => (
                   <option key={symbol} value={symbol}>
-                    {symbol.replace('_', '/')}
+                    {symbol}
                   </option>
-                )
-              )}
-            </select>
-          </div>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Check Interval */}
           <div className='flex items-center justify-between'>
@@ -96,7 +90,7 @@ const BotParameters = React.memo(
               <label className='text-sm text-blue-300'>Check Interval</label>
               <div className='group relative'>
                 <span className='cursor-help text-blue-400'>ⓘ</span>
-                <div className='absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-xs text-blue-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none'>
+                <div className='absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-xs text-blue-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none'>
                   How often the bot checks for trading signals. Lower values
                   mean more frequent checks but higher API usage.
                   <br />
@@ -122,9 +116,10 @@ const BotParameters = React.memo(
                 }}
                 onBlur={() => {
                   if (isBotRunning) return;
-                  onUpdateParameters(selectedBot, {
-                    check_interval: checkIntervalInput * 60,
-                  });
+                  handleUpdateParameters(
+                    'check_interval',
+                    checkIntervalInput * 60
+                  );
                 }}
                 className={`bg-[#232a4d] px-2 py-1 rounded w-24 text-right [&::-webkit-inner-spin-button]:opacity-100 [&::-webkit-outer-spin-button]:opacity-100 ${
                   isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
@@ -145,22 +140,17 @@ const BotParameters = React.memo(
             </label>
             <div className='flex items-center gap-2'>
               <span className='text-sm text-blue-300'>
-                {selectedBotStatus.parameters?.continue_after_trade ??
-                defaultParameters.continue_after_trade
-                  ? 'Yes'
-                  : 'No'}
+                {parameters?.continue_after_trade ? 'Yes' : 'No'}
               </span>
               <input
                 type='checkbox'
-                checked={
-                  selectedBotStatus.parameters?.continue_after_trade ??
-                  defaultParameters.continue_after_trade
-                }
+                checked={parameters?.continue_after_trade}
                 onChange={(e) => {
                   if (isBotRunning) return;
-                  onUpdateParameters(selectedBot, {
-                    continue_after_trade: e.target.checked,
-                  });
+                  handleUpdateParameters(
+                    'continue_after_trade',
+                    e.target.checked
+                  );
                 }}
                 className={`bg-[#232a4d] rounded w-4 h-4 checked:bg-blue-500 hover:cursor-pointer ${
                   isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
@@ -178,32 +168,26 @@ const BotParameters = React.memo(
               </label>
               <div className='group relative'>
                 <span className='cursor-help text-blue-400'>ⓘ</span>
-                <div className='absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-xs text-blue-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none'>
-                  When enabled, the stop loss will automatically adjust to lock
-                  in profits as the price moves in your favor. The stop loss
-                  will maintain the initial risk distance but will never move
-                  against your position.
+                <div className='absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-xs text-blue-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none'>
+                  When enabled, the stop loss will move up as the price moves in
+                  your favor, locking in profits while still protecting against
+                  downside risk.
                 </div>
               </div>
             </div>
             <div className='flex items-center gap-2'>
               <span className='text-sm text-blue-300'>
-                {selectedBotStatus.parameters?.trailing_stop_loss ??
-                defaultParameters.trailing_stop_loss
-                  ? 'Enabled'
-                  : 'Disabled'}
+                {parameters?.trailing_stop_loss ? 'Enabled' : 'Disabled'}
               </span>
               <input
                 type='checkbox'
-                checked={
-                  selectedBotStatus.parameters?.trailing_stop_loss ??
-                  defaultParameters.trailing_stop_loss
-                }
+                checked={parameters?.trailing_stop_loss}
                 onChange={(e) => {
                   if (isBotRunning) return;
-                  onUpdateParameters(selectedBot, {
-                    trailing_stop_loss: e.target.checked,
-                  });
+                  handleUpdateParameters(
+                    'trailing_stop_loss',
+                    e.target.checked
+                  );
                 }}
                 className={`bg-[#232a4d] rounded w-4 h-4 checked:bg-blue-500 hover:cursor-pointer ${
                   isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
@@ -218,67 +202,64 @@ const BotParameters = React.memo(
             <label className='text-sm text-blue-300'>
               Max Concurrent Trades
             </label>
-            <input
-              type='number'
-              value={
-                selectedBotStatus.parameters?.max_concurrent_trades ||
-                defaultParameters.max_concurrent_trades
-              }
-              onChange={(e) => {
-                if (isBotRunning) return;
-                onUpdateParameters(selectedBot, {
-                  max_concurrent_trades: Math.max(
-                    1,
-                    Math.min(
-                      5,
-                      parseInt(e.target.value) ||
-                        defaultParameters.max_concurrent_trades
-                    )
-                  ),
-                });
-              }}
-              className={`bg-[#232a4d] px-2 py-1 rounded w-24 text-right ${
-                isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-              min='1'
-              max='5'
-              disabled={isBotRunning}
-            />
+            <div className='flex items-center gap-2'>
+              <input
+                type='number'
+                value={Math.max(
+                  1,
+                  Math.min(5, parameters?.max_concurrent_trades || 1)
+                )}
+                onChange={(e) => {
+                  if (isBotRunning) return;
+                  handleUpdateParameters(
+                    'max_concurrent_trades',
+                    Math.max(1, Math.min(5, parseInt(e.target.value) || 1))
+                  );
+                }}
+                className={`bg-[#232a4d] px-2 py-1 rounded w-24 text-right ${
+                  isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                min='1'
+                max='5'
+                step='1'
+                disabled={isBotRunning}
+              />
+            </div>
           </div>
 
-          {/* Risk Percent Per Trade - For both EMA and AI strategies */}
+          {/* Risk Per Trade */}
           <div className='flex items-center justify-between'>
             <div className='flex items-center gap-2'>
               <label className='text-sm text-blue-300'>Risk Per Trade</label>
               <div className='group relative'>
                 <span className='cursor-help text-blue-400'>ⓘ</span>
                 <div className='absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-xs text-blue-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none'>
-                  {selectedBot === 'ema_strategy'
+                  {botId === 'ema_strategy'
                     ? `The percentage of your account balance to risk on each trade. 
                     Position size is calculated based on the distance between entry price and the 50 EMA (which serves as the stop loss).
-                    Lower values (0.5-1%) are recommended for safer trading.`
+                    For example, with 0.5% risk, a stop loss 2% away from entry would use 25% of your maximum position size.`
                     : `The percentage of your account balance to risk on each trade.
-                    This determines position size based on the distance to your
-                    stop loss. Lower values (1-2%) are more conservative, higher
-                    values (3-5%) are more aggressive.`}
+                    This determines your position size based on the distance between entry and stop loss.
+                    Lower values (0.1-1%) are more conservative, higher values (1-5%) are more aggressive.`}
                 </div>
               </div>
             </div>
             <div className='flex items-center gap-2'>
               <input
                 type='number'
-                value={
-                  selectedBotStatus.parameters?.risk_percent ||
-                  defaultParameters.risk_percent
-                }
+                value={Math.max(
+                  0.1,
+                  Math.min(10, parameters?.risk_percent || 0.5)
+                )}
                 onChange={(e) => {
                   if (isBotRunning) return;
-                  const value =
-                    parseFloat(e.target.value) ||
-                    defaultParameters.risk_percent;
-                  onUpdateParameters(selectedBot, {
-                    risk_percent: Math.max(0.1, Math.min(10, value)),
-                  });
+                  handleUpdateParameters(
+                    'risk_percent',
+                    Math.max(
+                      0.1,
+                      Math.min(10, parseFloat(e.target.value) || 0.5)
+                    )
+                  );
                 }}
                 className={`bg-[#232a4d] px-2 py-1 rounded w-24 text-right ${
                   isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
@@ -293,7 +274,7 @@ const BotParameters = React.memo(
           </div>
 
           {/* Take Profit Level - For EMA strategy */}
-          {selectedBot === 'ema_strategy' && (
+          {botId === 'ema_strategy' && (
             <div className='flex items-center justify-between'>
               <div className='flex items-center gap-2'>
                 <label className='text-sm text-blue-300'>
@@ -301,13 +282,10 @@ const BotParameters = React.memo(
                 </label>
                 <div className='group relative'>
                   <span className='cursor-help text-blue-400'>ⓘ</span>
-                  <div className='absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-xs text-blue-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none'>
-                    The percentage distance from entry price to take profit
-                    level. While the stop loss is placed at the 50 EMA, the take
-                    profit is set at this fixed percentage from entry. Higher
-                    values mean larger potential profits but may reduce win
-                    rate. Recommended: 2-6% for most markets, 4-8% for more
-                    volatile markets like crypto.
+                  <div className='absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-xs text-blue-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none'>
+                    The percentage distance from entry to take profit level.
+                    Higher values mean larger potential profits but lower win
+                    rates.
                   </div>
                 </div>
               </div>
@@ -315,32 +293,28 @@ const BotParameters = React.memo(
                 <input
                   type='number'
                   value={
-                    selectedBotStatus.parameters?.take_profit_level !==
-                    undefined
-                      ? (typeof selectedBotStatus.parameters
-                          .take_profit_level === 'number'
-                          ? selectedBotStatus.parameters.take_profit_level
-                          : parseFloat(
-                              selectedBotStatus.parameters.take_profit_level
-                            )) * 100
-                      : defaultParameters.take_profit_level * 100
+                    parameters?.take_profit_level !== undefined
+                      ? (typeof parameters.take_profit_level === 'number'
+                          ? parameters.take_profit_level
+                          : parseFloat(parameters.take_profit_level)) * 100
+                      : 400
                   }
                   onChange={(e) => {
                     if (isBotRunning) return;
-                    const value =
-                      parseFloat(e.target.value) ||
-                      defaultParameters.take_profit_level * 100;
-                    onUpdateParameters(selectedBot, {
-                      take_profit_level:
-                        Math.max(0.5, Math.min(20, value)) / 100,
-                    });
+                    handleUpdateParameters(
+                      'take_profit_level',
+                      Math.max(
+                        0.5,
+                        Math.min(20, parseFloat(e.target.value) || 0.5) / 100
+                      )
+                    );
                   }}
                   className={`bg-[#232a4d] px-2 py-1 rounded w-24 text-right ${
                     isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                   min='0.5'
                   max='20'
-                  step='0.5'
+                  step='0.1'
                   disabled={isBotRunning}
                 />
                 <span className='text-sm text-blue-300'>%</span>
@@ -348,74 +322,53 @@ const BotParameters = React.memo(
             </div>
           )}
 
-          {/* AI Strategy Specific Parameters */}
+          {/* AI-specific parameters */}
           {isAIStrategy && (
             <>
-              {/* Trading Term Selector */}
+              {/* Trading Term */}
               <div className='flex items-center justify-between'>
                 <label className='text-sm text-blue-300'>Trading Term</label>
-                <select
-                  value={
-                    selectedBotStatus.parameters?.trading_term ||
-                    defaultParameters.trading_term ||
-                    'Day trade'
-                  }
-                  onChange={(e) => {
-                    if (isBotRunning) return;
-                    onUpdateParameters(selectedBot, {
-                      trading_term: e.target.value,
-                    });
-                  }}
-                  className={`bg-[#232a4d] px-2 py-1 rounded w-40 ${
-                    isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                  disabled={isBotRunning}>
-                  {termOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <div className='flex items-center gap-2'>
+                  <select
+                    value={parameters?.trading_term || 'Day trade'}
+                    onChange={(e) => {
+                      if (isBotRunning) return;
+                      handleUpdateParameters('trading_term', e.target.value);
+                    }}
+                    className={`bg-[#232a4d] px-2 py-1 rounded w-40 ${
+                      isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    disabled={isBotRunning}>
+                    {termOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              {/* Risk Level Selector */}
+              {/* Risk Level */}
               <div className='flex items-center justify-between'>
                 <label className='text-sm text-blue-300'>Risk Level</label>
-                <select
-                  value={
-                    selectedBotStatus.parameters?.risk_level ||
-                    defaultParameters.risk_level ||
-                    'moderate'
-                  }
-                  onChange={(e) => {
-                    if (isBotRunning) return;
-                    onUpdateParameters(selectedBot, {
-                      risk_level: e.target.value,
-                    });
-                  }}
-                  className={`bg-[#232a4d] px-2 py-1 rounded w-40 ${
-                    isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                  disabled={isBotRunning}>
-                  {riskLevelOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className='mt-2 p-3 bg-blue-900/30 rounded text-xs text-blue-200'>
-                <p className='mb-2'>
-                  <span className='font-medium'>Note:</span> This AI-driven
-                  strategy automatically determines:
-                </p>
-                <ul className='list-disc ml-4 space-y-1'>
-                  <li>Optimal entry points based on AI analysis</li>
-                  <li>Take profit levels for maximizing gains</li>
-                  <li>Stop loss levels for risk management</li>
-                  <li>Position sizing based on your risk percentage setting</li>
-                </ul>
+                <div className='flex items-center gap-2'>
+                  <select
+                    value={parameters?.risk_level || 'moderate'}
+                    onChange={(e) => {
+                      if (isBotRunning) return;
+                      handleUpdateParameters('risk_level', e.target.value);
+                    }}
+                    className={`bg-[#232a4d] px-2 py-1 rounded w-40 ${
+                      isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    disabled={isBotRunning}>
+                    {riskLevelOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </>
           )}
@@ -606,7 +559,7 @@ const BotMonitor = () => {
     async (botId) => {
       try {
         setLoading(true);
-        const currentStatus = botsStatus[botId].running;
+        const currentStatus = botsStatus[botId]?.running || false;
         await axios.post(`${config.api.tradingUrl}/api/bots/${botId}/toggle`, {
           action: currentStatus ? 'stop' : 'start',
         });
@@ -711,6 +664,24 @@ const BotMonitor = () => {
     [selectedBotStatus.parameters, defaultParameters, fetchBots] // Add fetchBots to dependencies
   );
 
+  // Group bots by type
+  const groupedBots = useMemo(() => {
+    const groups = {
+      technical: [],
+      ai: [],
+    };
+
+    Object.entries(botsStatus).forEach(([botId, bot]) => {
+      if (botId.startsWith('ai_')) {
+        groups.ai.push({ id: botId, ...bot });
+      } else {
+        groups.technical.push({ id: botId, ...bot });
+      }
+    });
+
+    return groups;
+  }, [botsStatus]);
+
   if (loading && !botsStatus) {
     return (
       <div className='flex items-center justify-center h-64'>
@@ -730,82 +701,105 @@ const BotMonitor = () => {
   if (!botsStatus) return null;
 
   return (
-    <div className='bg-[#232a4d] rounded-lg p-6 space-y-6'>
-      <div className='flex justify-between items-center'>
-        <h2 className='text-2xl font-bold text-blue-100'>Trading Bots</h2>
-        <select
-          className='bg-blue-900 text-blue-200 px-3 py-2 rounded'
-          value={selectedBot}
-          onChange={(e) => setSelectedBot(e.target.value)}>
-          {Object.entries(botsStatus).map(([botId, bot]) => (
-            <option key={botId} value={botId}>
-              {bot.name}
-            </option>
-          ))}
-        </select>
-      </div>
+    <div className='p-6 bg-[#0f1535] text-white min-h-screen'>
+      <h1 className='text-2xl font-bold mb-6'>Trading Bot Dashboard</h1>
 
-      {selectedBotStatus && (
-        <div className='space-y-6'>
-          {/* Bot Status and Controls */}
-          <div className='flex items-center justify-between bg-[#1a1f3c] p-4 rounded'>
-            <div>
-              <h3 className='text-lg font-semibold text-blue-100 flex items-center gap-2'>
-                {selectedBotStatus.name}
-                <div className='group relative'>
-                  <span className='cursor-help text-blue-400'>ⓘ</span>
-                  <div className='absolute top-full left-0 mt-2 px-4 py-3 bg-gray-900 text-sm text-blue-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity w-80 pointer-events-none z-50'>
-                    <div className='space-y-3'>
-                      <div className='flex items-center justify-between'>
-                        <span className='font-medium'>
-                          {selectedBotStatus.status?.strategy_info?.name}
-                        </span>
-                        <span className='text-xs text-blue-400'>
-                          {selectedBotStatus.status?.strategy_info?.period}
-                        </span>
-                      </div>
-                      <p>
-                        {selectedBotStatus.status?.strategy_info?.description}
-                      </p>
-                      <ul className='list-disc ml-4 space-y-1'>
-                        {selectedBotStatus.status?.strategy_info?.rules.map(
-                          (rule, index) => (
-                            <li key={index}>{rule}</li>
-                          )
-                        )}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </h3>
-              <p className='text-sm text-blue-300'>
-                Status: {selectedBotStatus.running ? 'Running' : 'Stopped'}
-              </p>
-            </div>
-            <button
-              onClick={() => handleToggleBot(selectedBot)}
-              className={`px-4 py-2 rounded font-medium ${
-                selectedBotStatus.running
-                  ? 'bg-rose-500 hover:bg-rose-600'
-                  : 'bg-emerald-500 hover:bg-emerald-600'
-              } text-white transition-colors`}>
-              {selectedBotStatus.running ? 'Stop Bot' : 'Start Bot'}
-            </button>
+      <div className='grid grid-cols-1 md:grid-cols-4 gap-6'>
+        <div className='md:col-span-1 bg-[#1a1f3c] p-4 rounded'>
+          <h2 className='text-xl font-bold mb-4'>Trading Bots</h2>
+
+          {/* Technical Analysis Bots */}
+          <div className='mb-6'>
+            <h3 className='text-md font-semibold text-blue-300 mb-2'>
+              Technical Analysis
+            </h3>
+            <ul className='space-y-2'>
+              {groupedBots.technical.map((bot) => (
+                <li
+                  key={bot.id}
+                  className={`p-2 rounded cursor-pointer flex justify-between items-center ${
+                    selectedBot === bot.id
+                      ? 'bg-blue-800 text-white'
+                      : 'hover:bg-[#2a2f4c]'
+                  }`}
+                  onClick={() => setSelectedBot(bot.id)}>
+                  <span>{bot.name}</span>
+                  <span
+                    className={`px-2 py-1 text-xs rounded ${
+                      bot.running ? 'bg-green-800' : 'bg-red-800'
+                    }`}>
+                    {bot.running ? 'Running' : 'Stopped'}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          {/* Parameters - won't rerender with status updates */}
-          <BotParameters
-            selectedBot={selectedBot}
-            selectedBotStatus={selectedBotStatus}
-            defaultParameters={defaultParameters}
-            onUpdateParameters={handleUpdateParameters}
-            onUpdateSymbol={handleUpdateSymbol}
-          />
+          {/* AI Strategy Bots */}
+          <div>
+            <h3 className='text-md font-semibold text-blue-300 mb-2'>
+              AI Strategies
+            </h3>
+            <ul className='space-y-2'>
+              {groupedBots.ai.map((bot) => (
+                <li
+                  key={bot.id}
+                  className={`p-2 rounded cursor-pointer flex justify-between items-center ${
+                    selectedBot === bot.id
+                      ? 'bg-blue-800 text-white'
+                      : 'hover:bg-[#2a2f4c]'
+                  }`}
+                  onClick={() => setSelectedBot(bot.id)}>
+                  <span>{bot.name}</span>
+                  <span
+                    className={`px-2 py-1 text-xs rounded ${
+                      bot.running ? 'bg-green-800' : 'bg-red-800'
+                    }`}>
+                    {bot.running ? 'Running' : 'Stopped'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
 
-          {/* Polled data in separate component */}
+        <div className='md:col-span-3 space-y-6'>
+          {/* Bot Controls */}
+          <div className='bg-[#1a1f3c] p-4 rounded'>
+            <div className='flex justify-between items-center mb-4'>
+              <h2 className='text-xl font-bold'>{selectedBotStatus.name}</h2>
+              <button
+                onClick={() => handleToggleBot(selectedBot)}
+                disabled={loading}
+                className={`px-4 py-2 rounded ${
+                  selectedBotStatus.running
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}>
+                {loading
+                  ? 'Processing...'
+                  : selectedBotStatus.running
+                  ? 'Stop Bot'
+                  : 'Start Bot'}
+              </button>
+            </div>
+
+            {/* Bot Parameters */}
+            <BotParameters
+              botId={selectedBot}
+              parameters={selectedBotStatus.parameters || defaultParameters}
+              onUpdate={fetchBots}
+              availableInstruments={
+                selectedBotStatus.status?.available_instruments || []
+              }
+              isBotRunning={selectedBotStatus.running}
+            />
+          </div>
+
+          {/* Bot Status */}
           <BotStatus botId={selectedBot} />
         </div>
-      )}
+      </div>
     </div>
   );
 };
