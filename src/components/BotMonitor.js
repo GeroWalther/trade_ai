@@ -11,10 +11,13 @@ const BotParameters = React.memo(
     );
 
     useEffect(() => {
-      if (parameters?.check_interval) {
+      if (parameters?.check_interval !== undefined) {
         setCheckIntervalInput(Math.round(parameters.check_interval / 60));
+      } else {
+        // Provide a default value if check_interval is undefined
+        setCheckIntervalInput(30);
       }
-    }, [parameters?.check_interval]);
+    }, [parameters]);
 
     // Check if this is an AI strategy
     const isAIStrategy = botId.includes('ai_');
@@ -135,12 +138,22 @@ const BotParameters = React.memo(
 
           {/* Continue After Trade */}
           <div className='flex items-center justify-between'>
-            <label className='text-sm text-blue-300'>
-              Continue After Trade
-            </label>
+            <div className='flex items-center gap-2'>
+              <label className='text-sm text-blue-300'>
+                Continue After Trade
+              </label>
+              <div className='group relative'>
+                <span className='cursor-help text-blue-400'>ⓘ</span>
+                <div className='absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-xs text-blue-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity w-64 pointer-events-none'>
+                  When enabled, the bot will continue looking for new trades
+                  after completing a trade. When disabled, it will stop after
+                  completing one trade cycle.
+                </div>
+              </div>
+            </div>
             <div className='flex items-center gap-2'>
               <span className='text-sm text-blue-300'>
-                {parameters?.continue_after_trade ? 'Yes' : 'No'}
+                {parameters?.continue_after_trade ? 'Enabled' : 'Disabled'}
               </span>
               <input
                 type='checkbox'
@@ -159,6 +172,38 @@ const BotParameters = React.memo(
               />
             </div>
           </div>
+
+          {/* Max Concurrent Trades - Only for AI strategies */}
+          {isAIStrategy && (
+            <div className='flex items-center justify-between'>
+              <label className='text-sm text-blue-300'>
+                Max Concurrent Trades
+              </label>
+              <div className='flex items-center gap-2'>
+                <input
+                  type='number'
+                  value={Math.max(
+                    1,
+                    Math.min(5, parameters?.max_concurrent_trades || 1)
+                  )}
+                  onChange={(e) => {
+                    if (isBotRunning) return;
+                    handleUpdateParameters(
+                      'max_concurrent_trades',
+                      Math.max(1, Math.min(5, parseInt(e.target.value) || 1))
+                    );
+                  }}
+                  className={`bg-[#232a4d] px-2 py-1 rounded w-24 text-right ${
+                    isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  min='1'
+                  max='5'
+                  step='1'
+                  disabled={isBotRunning}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Trailing Stop Loss */}
           <div className='flex items-center justify-between'>
@@ -192,36 +237,6 @@ const BotParameters = React.memo(
                 className={`bg-[#232a4d] rounded w-4 h-4 checked:bg-blue-500 hover:cursor-pointer ${
                   isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
-                disabled={isBotRunning}
-              />
-            </div>
-          </div>
-
-          {/* Max Concurrent Trades */}
-          <div className='flex items-center justify-between'>
-            <label className='text-sm text-blue-300'>
-              Max Concurrent Trades
-            </label>
-            <div className='flex items-center gap-2'>
-              <input
-                type='number'
-                value={Math.max(
-                  1,
-                  Math.min(5, parameters?.max_concurrent_trades || 1)
-                )}
-                onChange={(e) => {
-                  if (isBotRunning) return;
-                  handleUpdateParameters(
-                    'max_concurrent_trades',
-                    Math.max(1, Math.min(5, parseInt(e.target.value) || 1))
-                  );
-                }}
-                className={`bg-[#232a4d] px-2 py-1 rounded w-24 text-right ${
-                  isBotRunning ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-                min='1'
-                max='5'
-                step='1'
                 disabled={isBotRunning}
               />
             </div>
@@ -515,6 +530,10 @@ const BotMonitor = () => {
     risk_percent: 0.5, // Default to 0.5% risk per trade
     trailing_stop_loss: false, // Default trailing stop loss to disabled
     take_profit_level: 0.04, // Default take profit level (4%)
+    // Bollinger Bands parameters
+    bb_length: 20,
+    bb_std: 2.0,
+    cash_at_risk: 0.1,
   };
 
   const [botsStatus, setBotsStatus] = useState({});
@@ -540,20 +559,32 @@ const BotMonitor = () => {
     fetchBots();
   }, [fetchBots]);
 
-  const selectedBotStatus = botsStatus[selectedBot] || {
-    name: '',
-    running: false,
-    parameters: defaultParameters,
-    status: {
-      strategy_info: {
+  // Ensure parameters are always defined
+  const selectedBotStatus = useMemo(() => {
+    const botStatus = botsStatus[selectedBot];
+    if (!botStatus) {
+      return {
         name: '',
-        period: '',
-        description: '',
-        rules: [],
-      },
-      available_instruments: [],
-    },
-  };
+        running: false,
+        parameters: defaultParameters,
+        status: {
+          strategy_info: {
+            name: '',
+            period: '',
+            description: '',
+            rules: [],
+          },
+          updates: [],
+        },
+      };
+    }
+
+    // Ensure parameters are always defined by merging with defaults
+    return {
+      ...botStatus,
+      parameters: { ...defaultParameters, ...botStatus.parameters },
+    };
+  }, [botsStatus, selectedBot, defaultParameters]);
 
   const handleToggleBot = useCallback(
     async (botId) => {
