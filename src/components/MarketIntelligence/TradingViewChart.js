@@ -8,7 +8,7 @@ const TradingViewChart = ({ symbol, theme = 'dark' }) => {
       width: '100%',
       height: '100%',
       symbol: symbol,
-      interval: '15',
+      interval: 'D',
       timezone: 'exchange',
       theme: theme,
       style: '1',

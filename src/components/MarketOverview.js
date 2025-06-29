@@ -4,6 +4,7 @@ import axios from 'axios';
 import TradingService from '../services/trading_service';
 import { config } from '../config';
 import { toast } from 'sonner';
+import TradingViewChart from './MarketIntelligence/TradingViewChart';
 
 const MarketOverview = () => {
   const availableInstruments = [
@@ -44,6 +45,9 @@ const MarketOverview = () => {
   const [editTakeProfit, setEditTakeProfit] = useState('');
   const [editStopLoss, setEditStopLoss] = useState('');
 
+  // New state for chart functionality
+  const [showChart, setShowChart] = useState(true);
+
   const fetchData = async () => {
     try {
       const data = await TradingService.getTradingStatus();
@@ -77,7 +81,8 @@ const MarketOverview = () => {
   };
 
   const formatCurrency = (amount) => {
-    if (!amount || typeof amount !== 'number') return 'N/A';
+    if (amount === null || amount === undefined || typeof amount !== 'number')
+      return 'N/A';
     return `${amount.toFixed(2)}€`;
   };
 
@@ -324,6 +329,23 @@ const MarketOverview = () => {
     return 'FOREX';
   };
 
+  // Convert OANDA symbol to TradingView symbol
+  const getTradingViewSymbol = (oandaSymbol) => {
+    const symbolMap = {
+      EUR_USD: 'FX:EURUSD',
+      GBP_USD: 'FX:GBPUSD',
+      USD_JPY: 'FX:USDJPY',
+      AUD_USD: 'FX:AUDUSD',
+      USD_CAD: 'FX:USDCAD',
+      BTC_USD: 'BITSTAMP:BTCUSD',
+      SPX500_USD: 'TVC:SPX',
+      NAS100_USD: 'NASDAQ:NDX',
+      XAU_USD: 'TVC:GOLD',
+      BCO_USD: 'TVC:UKOIL',
+    };
+    return symbolMap[oandaSymbol] || 'FX:EURUSD';
+  };
+
   const formatPositionDetails = (position) => {
     const isLong = position.quantity > 0;
 
@@ -446,6 +468,71 @@ const MarketOverview = () => {
           </p>
         </div>
       </div>
+
+      {/* Multiple TradingView Charts Section */}
+      {showChart && (
+        <div className='bg-[#232a4d] p-2 rounded-lg'>
+          <div className='flex justify-between items-center mb-2 px-4'>
+            <h3 className='text-lg font-bold'>Live Charts</h3>
+            <button
+              onClick={() => setShowChart(false)}
+              className='text-gray-400 hover:text-gray-300'>
+              <svg
+                xmlns='http://www.w3.org/2000/svg'
+                className='h-5 w-5'
+                viewBox='0 0 20 20'
+                fill='currentColor'>
+                <path
+                  fillRule='evenodd'
+                  d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
+                  clipRule='evenodd'
+                />
+              </svg>
+            </button>
+          </div>
+          {/* 2x2 Grid of Charts */}
+          <div className='grid grid-cols-2 gap-1'>
+            {/* Chart 1: EUR/USD */}
+            <div className='bg-[#1a1f3c] p-1 rounded'>
+              <div className='h-80 w-full'>
+                <TradingViewChart symbol='FX:EURUSD' theme='dark' />
+              </div>
+            </div>
+
+            {/* Chart 2: BTC/USD */}
+            <div className='bg-[#1a1f3c] p-1 rounded'>
+              <div className='h-80 w-full'>
+                <TradingViewChart symbol='BITSTAMP:BTCUSD' theme='dark' />
+              </div>
+            </div>
+
+            {/* Chart 3: Gold */}
+            <div className='bg-[#1a1f3c] p-1 rounded'>
+              <div className='h-80 w-full'>
+                <TradingViewChart symbol='TVC:GOLD' theme='dark' />
+              </div>
+            </div>
+
+            {/* Chart 4: S&P 500 */}
+            <div className='bg-[#1a1f3c] p-1 rounded'>
+              <div className='h-80 w-full'>
+                <TradingViewChart symbol='SP500' theme='dark' />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Show Charts Button (when charts are hidden) */}
+      {!showChart && (
+        <div className='bg-[#232a4d] p-4 rounded-lg text-center'>
+          <button
+            onClick={() => setShowChart(true)}
+            className='bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded'>
+            📈 Show 4 Live Charts
+          </button>
+        </div>
+      )}
 
       {/* Instrument Management */}
       <div className='bg-[#232a4d] p-6 rounded-lg'>
@@ -757,106 +844,107 @@ const MarketOverview = () => {
         )}
 
       {/* Positions */}
-      {Object.keys(tradingStatus.positions).length > 0 && (
-        <div className='bg-[#232a4d] p-6 rounded-lg'>
-          <h3 className='text-xl font-bold mb-6'>Open Positions</h3>
-          {Object.entries(tradingStatus.positions).map(
-            ([positionKey, position]) => (
-              <div
-                key={positionKey}
-                className='border-b border-blue-800 last:border-0 py-4'>
-                <div className='flex justify-between items-center'>
-                  <div>
-                    <h4 className='text-lg font-medium flex items-center gap-2'>
-                      {position.symbol.replace('_', '/')}
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          position.side === 'LONG'
-                            ? 'bg-emerald-900 text-emerald-200'
-                            : 'bg-rose-900 text-rose-200'
-                        }`}>
-                        {position.side}
-                      </span>
-                      <span className='text-xs text-blue-400'>
-                        ID: {position.trade_id}
-                      </span>
-                    </h4>
-                    <div className='grid grid-cols-2 gap-x-6 gap-y-1 text-sm text-gray-400 mt-2'>
-                      <div className='flex justify-between'>
-                        <span>Entry:</span>
-                        <span className='text-white'>
-                          {formatPrice(position.entry_price)}
+      {tradingStatus.positions &&
+        Object.keys(tradingStatus.positions).length > 0 && (
+          <div className='bg-[#232a4d] p-6 rounded-lg'>
+            <h3 className='text-xl font-bold mb-6'>Open Positions</h3>
+            {Object.entries(tradingStatus.positions).map(
+              ([positionKey, position]) => (
+                <div
+                  key={positionKey}
+                  className='border-b border-blue-800 last:border-0 py-4'>
+                  <div className='flex justify-between items-center'>
+                    <div>
+                      <h4 className='text-lg font-medium flex items-center gap-2'>
+                        {position.symbol.replace('_', '/')}
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs ${
+                            position.side === 'LONG'
+                              ? 'bg-emerald-900 text-emerald-200'
+                              : 'bg-rose-900 text-rose-200'
+                          }`}>
+                          {position.side}
                         </span>
-                      </div>
-                      <div className='flex justify-between'>
-                        <span>Current:</span>
-                        <span className='text-white'>
-                          {formatPrice(position.current_price)}
+                        <span className='text-xs text-blue-400'>
+                          ID: {position.trade_id}
                         </span>
+                      </h4>
+                      <div className='grid grid-cols-2 gap-x-6 gap-y-1 text-sm text-gray-400 mt-2'>
+                        <div className='flex justify-between'>
+                          <span>Entry:</span>
+                          <span className='text-white'>
+                            {formatPrice(position.entry_price)}
+                          </span>
+                        </div>
+                        <div className='flex justify-between'>
+                          <span>Current:</span>
+                          <span className='text-white'>
+                            {formatPrice(position.current_price)}
+                          </span>
+                        </div>
+                        <div className='flex justify-between'>
+                          <span>Quantity:</span>
+                          <span className='text-white'>
+                            {Math.abs(position.quantity)}
+                          </span>
+                        </div>
+                        <div className='flex justify-between'>
+                          <span className='mr-2'>Take Profit: </span>
+                          <span className='text-emerald-400'>
+                            {(() => {
+                              const trade = tradingStatus.trades?.find(
+                                (t) => t.id === position.trade_id
+                              );
+                              return trade?.takeProfitOrder
+                                ? formatPrice(trade.takeProfitOrder.price)
+                                : 'Not Set';
+                            })()}
+                          </span>
+                        </div>
+                        <div className='flex justify-between'>
+                          <span>Stop Loss:</span>
+                          <span className='text-rose-400'>
+                            {(() => {
+                              const trade = tradingStatus.trades?.find(
+                                (t) => t.id === position.trade_id
+                              );
+                              return trade?.stopLossOrder
+                                ? formatPrice(trade.stopLossOrder.price)
+                                : 'Not Set';
+                            })()}
+                          </span>
+                        </div>
                       </div>
-                      <div className='flex justify-between'>
-                        <span>Quantity:</span>
-                        <span className='text-white'>
-                          {Math.abs(position.quantity)}
-                        </span>
-                      </div>
-                      <div className='flex justify-between'>
-                        <span className='mr-2'>Take Profit: </span>
-                        <span className='text-emerald-400'>
-                          {(() => {
-                            const trade = tradingStatus.trades?.find(
-                              (t) => t.id === position.trade_id
-                            );
-                            return trade?.takeProfitOrder
-                              ? formatPrice(trade.takeProfitOrder.price)
-                              : 'Not Set';
-                          })()}
-                        </span>
-                      </div>
-                      <div className='flex justify-between'>
-                        <span>Stop Loss:</span>
-                        <span className='text-rose-400'>
-                          {(() => {
-                            const trade = tradingStatus.trades?.find(
-                              (t) => t.id === position.trade_id
-                            );
-                            return trade?.stopLossOrder
-                              ? formatPrice(trade.stopLossOrder.price)
-                              : 'Not Set';
-                          })()}
+                      <div className='text-sm mt-2'>
+                        <span
+                          className={
+                            position.pl_euro >= 0
+                              ? 'text-emerald-400'
+                              : 'text-rose-400'
+                          }>
+                          P/L: {formatCurrency(position.pl_euro)} (
+                          {position.profit_pct?.toFixed(2)}%)
                         </span>
                       </div>
                     </div>
-                    <div className='text-sm mt-2'>
-                      <span
-                        className={
-                          position.pl_euro >= 0
-                            ? 'text-emerald-400'
-                            : 'text-rose-400'
-                        }>
-                        P/L: {formatCurrency(position.pl_euro)} (
-                        {position.profit_pct?.toFixed(2)}%)
-                      </span>
+                    <div className='flex items-center gap-3'>
+                      <button
+                        onClick={() => openEditModal(position)}
+                        className='px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm transition-colors'>
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleClosePosition(position)}
+                        className='px-3 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white text-sm transition-colors'>
+                        Close Position
+                      </button>
                     </div>
-                  </div>
-                  <div className='flex items-center gap-3'>
-                    <button
-                      onClick={() => openEditModal(position)}
-                      className='px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm transition-colors'>
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleClosePosition(position)}
-                      className='px-3 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white text-sm transition-colors'>
-                      Close Position
-                    </button>
                   </div>
                 </div>
-              </div>
-            )
-          )}
-        </div>
-      )}
+              )
+            )}
+          </div>
+        )}
 
       {/* Pending Orders */}
       {tradingStatus.pending_orders?.length > 0 && (
