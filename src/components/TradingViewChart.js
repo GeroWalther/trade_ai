@@ -31,7 +31,7 @@ const TradingViewChart = ({ symbol, theme = 'dark' }) => {
         script.async = true;
         script.type = 'text/javascript';
 
-        // Configuration for the widget
+        // Configuration specifically for fullscreen button
         const config = {
           autosize: true,
           symbol: symbol,
@@ -40,11 +40,17 @@ const TradingViewChart = ({ symbol, theme = 'dark' }) => {
           theme: theme,
           style: '1',
           locale: 'en',
-          toolbar_bg: '#f1f3f6',
           enable_publishing: false,
           allow_symbol_change: true,
           calendar: false,
           support_host: 'https://www.tradingview.com',
+          // Essential settings for fullscreen functionality
+          hide_top_toolbar: false,
+          save_image: false,
+          // This is the key parameter for fullscreen button
+          show_popup_button: true,
+          popup_width: '1000',
+          popup_height: '650',
         };
 
         // Add configuration as script content
@@ -81,7 +87,7 @@ const TradingViewChart = ({ symbol, theme = 'dark' }) => {
     return (
       <div
         className='tradingview-widget-container'
-        style={{ height: '400px', width: '100%' }}>
+        style={{ height: '100%', width: '100%' }}>
         <div className='flex items-center justify-center h-full bg-gray-800 rounded border border-red-500'>
           <div className='text-center text-red-400'>
             <div className='text-4xl mb-2'>⚠️</div>
@@ -99,32 +105,12 @@ const TradingViewChart = ({ symbol, theme = 'dark' }) => {
     <div
       className='tradingview-widget-container'
       ref={containerRef}
-      style={{ height: '400px', width: '100%', position: 'relative' }}>
+      style={{ height: '100%', width: '100%', position: 'relative' }}>
       {/* Widget container */}
       <div
         className='tradingview-widget-container__widget'
         id={widgetId}
-        style={{ height: 'calc(100% - 32px)', width: '100%' }}></div>
-
-      {/* Copyright */}
-      <div
-        className='tradingview-widget-copyright'
-        style={{
-          fontSize: '13px',
-          lineHeight: '32px',
-          textAlign: 'center',
-          verticalAlign: 'middle',
-          color: '#9598A1',
-        }}>
-        <a
-          href={`https://www.tradingview.com/symbols/${symbol}/`}
-          rel='noopener nofollow'
-          target='_blank'
-          style={{ color: '#9598A1', textDecoration: 'none' }}>
-          <span style={{ color: '#1848CC' }}>{symbol} Chart</span>
-        </a>{' '}
-        by TradingView
-      </div>
+        style={{ height: '100%', width: '100%' }}></div>
 
       {/* Loading overlay */}
       {!isLoaded && !error && (

@@ -494,28 +494,28 @@ const MarketOverview = () => {
           <div className='grid grid-cols-2 gap-1'>
             {/* Chart 1: EUR/USD */}
             <div className='bg-[#1a1f3c] p-1 rounded'>
-              <div className='h-80 w-full'>
+              <div className='h-[28rem] w-full'>
                 <TradingViewChart symbol='FX:EURUSD' theme='dark' />
               </div>
             </div>
 
             {/* Chart 2: BTC/USD */}
             <div className='bg-[#1a1f3c] p-1 rounded'>
-              <div className='h-80 w-full'>
+              <div className='h-[28rem] w-full'>
                 <TradingViewChart symbol='BITSTAMP:BTCUSD' theme='dark' />
               </div>
             </div>
 
             {/* Chart 3: Gold */}
             <div className='bg-[#1a1f3c] p-1 rounded'>
-              <div className='h-80 w-full'>
+              <div className='h-[28rem] w-full'>
                 <TradingViewChart symbol='TVC:GOLD' theme='dark' />
               </div>
             </div>
 
             {/* Chart 4: S&P 500 */}
             <div className='bg-[#1a1f3c] p-1 rounded'>
-              <div className='h-80 w-full'>
+              <div className='h-[28rem] w-full'>
                 <TradingViewChart symbol='SP500' theme='dark' />
               </div>
             </div>
