@@ -49,6 +49,7 @@ const AIChat = () => {
         type: 'ai',
         content: response.data.response,
         sources: response.data.sources || [],
+        webSearchPerformed: response.data.web_search_performed || false,
         timestamp: new Date(),
       };
 
@@ -84,8 +85,8 @@ const AIChat = () => {
 
   const suggestedQuestions = [
     "What's happening in the markets today?",
-    'What are the key economic events this week?',
-    'Tell me about the latest Fed policy decisions',
+    'What are the latest EUR/USD news?',
+    'Tell me about recent Fed policy decisions',
   ];
 
   const handleSuggestedQuestion = (question) => {
@@ -137,6 +138,14 @@ const AIChat = () => {
                   <span className='text-xs text-gray-400'>
                     AI Finance Expert
                   </span>
+                  {message.webSearchPerformed && (
+                    <div className='flex items-center space-x-1 px-2 py-1 bg-green-900 bg-opacity-30 rounded-full border border-green-600'>
+                      <span className='text-green-400 text-xs'>🔍</span>
+                      <span className='text-xs text-green-400'>
+                        Live Search
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -197,7 +206,7 @@ const AIChat = () => {
                     style={{ animationDelay: '0.2s' }}></div>
                 </div>
                 <span className='text-sm text-gray-400'>
-                  Analyzing market data...
+                  Searching markets & analyzing data...
                 </span>
               </div>
             </div>
