@@ -4,7 +4,7 @@ import axios from 'axios';
 import TradingService from '../services/trading_service';
 import { config } from '../config';
 import { toast } from 'sonner';
-import TradingViewChart from './MarketIntelligence/TradingViewChart';
+import TradingViewChart from './TradingViewChart';
 
 const MarketOverview = () => {
   const availableInstruments = [
