@@ -1,12 +1,13 @@
 export const config = {
   api: {
-    baseUrl: 'http://localhost:5003', // Master Trading Bot server
-    tradingUrl: 'http://localhost:5003', // Master Trading Bot server
+    baseUrl: 'http://0.0.0.0:5003', // Master Trading Bot server
+    backendUrl: 'http://0.0.0.0:5003/api', // Backend API base URL
+    customBotsUrl: 'http://0.0.0.0:5003/api/custom-bots', // Custom Bots API
     timeout: 30000, // 30 seconds for AI analysis
   },
   app: {
     name: 'Master Trading Bot',
     version: process.env.npm_package_version,
   },
-  wsUrl: 'ws://localhost:5003', // WebSocket for real-time updates
+  wsUrl: 'ws://0.0.0.0:5003', // WebSocket for real-time updates
 };

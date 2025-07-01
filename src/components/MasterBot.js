@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './MasterBot.css';
+import { config } from '../config';
 
 const MasterBot = () => {
   const [botStatus, setBotStatus] = useState({
@@ -28,7 +29,7 @@ const MasterBot = () => {
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
 
-  const API_BASE = 'http://localhost:5003/api';
+  const API_BASE = config.api.backendUrl;
 
   // Fetch bot status
   const fetchBotStatus = async () => {

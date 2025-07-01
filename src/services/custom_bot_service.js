@@ -1,4 +1,6 @@
-const API_BASE_URL = 'http://localhost:5002/api/custom-bots';
+import { config } from '../config';
+
+const API_BASE_URL = config.api.customBotsUrl;
 
 class CustomBotService {
   // Get all bots
@@ -201,7 +203,7 @@ class CustomBotService {
   // Validate bot code
   static async validateBotCode(code) {
     try {
-      const response = await fetch(`${API_BASE_URL}/validate/validate`, {
+      const response = await fetch(`${API_BASE_URL}/temp-bot-id/validate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -227,7 +229,7 @@ class CustomBotService {
   // Get trading status (positions from overview)
   static async getTradingStatus() {
     try {
-      const response = await fetch('http://localhost:5002/trading-status');
+      const response = await fetch(`${config.api.baseUrl}/trading-status`);
       const data = await response.json();
 
       return data;

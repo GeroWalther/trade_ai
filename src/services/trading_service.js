@@ -4,9 +4,7 @@ import { config } from '../config';
 class TradingService {
   async getTradingStatus() {
     try {
-      const response = await axios.get(
-        `${config.api.tradingUrl}/trading-status`
-      );
+      const response = await axios.get(`${config.api.baseUrl}/trading-status`);
       return response.data;
     } catch (error) {
       console.error('Error fetching trading status:', error);
@@ -27,7 +25,7 @@ class TradingService {
       };
 
       const response = await axios.post(
-        `${config.api.tradingUrl}/execute-trade`,
+        `${config.api.baseUrl}/execute-trade`,
         requestData
       );
       return response.data;
@@ -40,7 +38,7 @@ class TradingService {
   async closePosition(tradeId) {
     try {
       const response = await axios.post(
-        `${config.api.tradingUrl}/close-position/${tradeId}`
+        `${config.api.baseUrl}/close-position/${tradeId}`
       );
       return response.data;
     } catch (error) {
@@ -52,7 +50,7 @@ class TradingService {
   async cancelOrder(orderId) {
     try {
       const response = await axios.post(
-        `${config.api.tradingUrl}/cancel-order/${orderId}`
+        `${config.api.baseUrl}/cancel-order/${orderId}`
       );
       return response.data;
     } catch (error) {
@@ -64,7 +62,7 @@ class TradingService {
   async modifyPosition(tradeId, takeProfit, stopLoss) {
     try {
       const response = await axios.post(
-        `${config.api.tradingUrl}/modify-position`,
+        `${config.api.baseUrl}/modify-position`,
         {
           trade_id: tradeId,
           take_profit: takeProfit,

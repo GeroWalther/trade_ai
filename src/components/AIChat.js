@@ -147,7 +147,7 @@ const AIChat = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`${config.api.tradingUrl}/ai-chat`, {
+      const response = await axios.post(`${config.api.baseUrl}/ai-chat`, {
         message: userMessage.content,
         conversation_history: messages.slice(-5), // Send last 5 messages for context
       });
